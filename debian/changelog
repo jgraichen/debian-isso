@@ -1,0 +1,11 @@
+isso (0.3.1-2) UNRELEASED; urgency=low
+
+  * Rebuild with source package
+
+ -- Jan Graichen <jg@altimos.de>  Sun, 03 Nov 2013 22:46:40 +0100
+
+isso (0.3.1-1) unstable; urgency=low
+
+  * source package automatically created by stdeb 0.6.0+git
+
+ -- Jan Graichen <jg@altimos.de>  Sun, 03 Nov 2013 22:43:46 +0100
