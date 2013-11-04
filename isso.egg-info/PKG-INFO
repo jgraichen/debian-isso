@@ -1,0 +1,18 @@
+Metadata-Version: 1.1
+Name: isso
+Version: 0.3.1
+Summary: lightweight Disqus alternative
+Home-page: https://github.com/posativ/isso/
+Author: Martin Zimmermann
+Author-email: info@posativ.org
+License: BSD revised
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
+Classifier: Topic :: Internet
+Classifier: Topic :: Internet :: WWW/HTTP :: HTTP Servers
+Classifier: Topic :: Internet :: WWW/HTTP :: WSGI :: Application
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3.3
