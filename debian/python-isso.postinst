@@ -1,0 +1,23 @@
+#!/bin/sh
+# postinst script for python-isso
+
+#DEBHELPER#
+
+case $1 in
+    configure)
+        # For systemd, enable the python-isso unit, but don't start it
+	    if [ -x /bin/systemctl ]; then
+	      systemctl enable python-isso.service >/dev/null 2>&1 || true
+	    fi
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        ;;
+
+esac
+
+exit 0

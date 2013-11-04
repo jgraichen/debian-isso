@@ -2,11 +2,24 @@ Source: isso
 Maintainer: Jan Graichen <jg@altimos.de>
 Section: python
 Priority: optional
-Build-Depends: python-setuptools (>= 0.6b3), python-all (>= 2.6.6-3), debhelper (>= 7.4.3)
+Build-Depends: python-setuptools (>= 0.6b3),
+               python-all (>= 2.6.6-3),
+               debhelper (>= 7.4.3)
 Standards-Version: 3.9.1
+Vcs-Browser: http://github.com/jgraichen/debian-isso
+Vcs-Git: git://github.com/jgraichen/debian-isso.git
+
+Package: isso-common
+Architecture: all
+Description: lightweight Disqus alternative
+ .
+ Common files such as configuration, user and database.
 
 Package: python-isso
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}
+Depends: isso-common, ${misc:Depends}, ${python:Depends}
+Recommends: ${python:Recommends}
 Description: lightweight Disqus alternative
+ .
+ This package provides the Python 2.x module.
 

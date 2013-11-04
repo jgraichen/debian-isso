@@ -1,0 +1,12 @@
+[Unit]
+Description=lightweight Disqus alternative
+
+[Service]
+User=isso
+ExecStart=/usr/bin/isso -c /etc/isso.conf run
+
+[Install]
+WantedBy=multi-user.target
+
+[Install]
+Alias=isso.service

@@ -1,3 +1,10 @@
+isso (0.3.1-5) UNRELEASED; urgency=low
+
+  * Add default config and user via isso-common package
+  * Add systemd service file
+
+ -- Jan Graichen <jg@altimos.de>  Mon, 04 Nov 2013 22:56:48 +0100
+
 isso (0.3.1-4) wheezy; urgency=low
 
   * Patch to use with werkzeug 0.8
