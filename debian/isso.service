@@ -7,6 +7,3 @@ ExecStart=/usr/bin/isso -c /etc/isso.conf run
 
 [Install]
 WantedBy=multi-user.target
-
-[Install]
-Alias=isso.service

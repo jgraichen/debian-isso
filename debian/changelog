@@ -1,4 +1,10 @@
-isso (0.3.1-5) UNRELEASED; urgency=low
+isso (0.3.1-10) wheezy; urgency=low
+
+  * Add init.d startup script
+
+ -- Jan Graichen <jg@altimos.de>  Tue, 05 Nov 2013 00:05:17 +0100
+
+isso (0.3.1-5) wheezy; urgency=low
 
   * Add default config and user via isso-common package
   * Add systemd service file

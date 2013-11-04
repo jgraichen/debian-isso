@@ -1,13 +1,13 @@
 #!/bin/sh
-# postinst script for python-isso
+# postinst script for isso
 
 #DEBHELPER#
 
 case $1 in
     configure)
-        # For systemd, enable the python-isso unit, but don't start it
+        # For systemd, enable the isso unit, but don't start it
 	    if [ -x /bin/systemctl ]; then
-	      systemctl enable python-isso.service >/dev/null 2>&1 || true
+	      systemctl enable isso.service >/dev/null 2>&1 || true
 	    fi
         ;;
 

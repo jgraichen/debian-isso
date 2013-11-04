@@ -11,7 +11,7 @@ case "$1" in
     upgrade)
         # systemd: start the new version of isso
         if [ -x /bin/systemctl ]; then
-            systemctl restart python-isso.service
+            systemctl restart isso.service
         fi
     ;;
 

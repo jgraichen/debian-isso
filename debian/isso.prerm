@@ -7,8 +7,8 @@ case "$1" in
 	remove|upgrade|deconfigure)
 		# systemd: On uninstall (not upgrade), disable and stop the unit
 		if [ -x /bin/systemctl ]; then
-			systemctl --no-reload disable python-isso.service >/dev/null 2>&1 || true
-			systemctl stop python-isso.service >/dev/null 2>&1 || true
+			systemctl --no-reload disable isso.service >/dev/null 2>&1 || true
+			systemctl stop isso.service >/dev/null 2>&1 || true
 		fi
 	;;
 

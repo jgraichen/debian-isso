@@ -11,13 +11,14 @@ Vcs-Git: git://github.com/jgraichen/debian-isso.git
 
 Package: isso-common
 Architecture: all
+Depends: adduser
 Description: lightweight Disqus alternative
  .
  Common files such as configuration, user and database.
 
-Package: python-isso
+Package: isso
 Architecture: all
-Depends: isso-common, ${misc:Depends}, ${python:Depends}
+Depends: isso-common (= ${binary:Version}), lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends}
 Recommends: ${python:Recommends}
 Description: lightweight Disqus alternative
  .
