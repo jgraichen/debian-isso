@@ -1,0 +1,43 @@
+--- a/isso/utils/__init__.py
++++ b/isso/utils/__init__.py
+@@ -2,6 +2,9 @@
+
+ from __future__ import division
+
++import pkg_resources
++werkzeug = pkg_resources.get_distribution("werkzeug")
++
+ import json
+ import random
+ import hashlib
+@@ -91,6 +94,10 @@ def __len__(self):
+
+ class JSONRequest(Request):
+
++    if werkzeug.version.startswith("0.8"):
++        def get_data(self):
++            return self.data.decode('utf-8')
++
+     def get_json(self):
+         try:
+             return json.loads(self.get_data().decode('utf-8'))
+--- a/setup.py
++++ b/setup.py
+@@ -5,13 +5,15 @@
+
+ from setuptools import setup, find_packages
+
+-requires = ['werkzeug>=0.9', 'itsdangerous', 'misaka', 'html5lib']
++requires = ['itsdangerous', 'misaka', 'html5lib']
+
+ if (3, 0) <= sys.version_info < (3, 3):
+     raise SystemExit("Python 3.0, 3.1 and 3.2 are not supported")
+
+ if sys.version_info < (3, 0):
+-    requires += ['ipaddress', 'configparser']
++    requires += ['ipaddress', 'configparser', 'werkzeug>=0.8']
++else:
++    requires += ['werkzeug>=0.9']
+
+ setup(
+     name='isso',
