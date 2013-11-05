@@ -1,3 +1,10 @@
+isso (0.4-1) UNRELEASED; urgency=low
+
+  * Add uscan watch
+  * Imported Upstream version 0.4
+
+ -- Jan Graichen <jg@altimos.de>  Tue, 05 Nov 2013 19:13:21 +0100
+
 isso (0.3.1-13) wheezy; urgency=low
 
   * Add init.d startup script
