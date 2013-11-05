@@ -2480,11 +2480,6 @@ return Q;
 
 });
 
-/*
- * Copyright 2013, Martin Zimmermann <info@posativ.org>. All rights reserved.
- * License: BSD Style, 2 clauses. See isso/__init__.py.
- */
-
 define('app/api',["q"], function(Q) {
 
     
@@ -2492,8 +2487,7 @@ define('app/api',["q"], function(Q) {
     Q.stopUnhandledRejectionTracking();
     Q.longStackSupport = true;
 
-    var endpoint = null, remote_addr = null,
-        salt = "Eech7co8Ohloopo9Ol6baimi",
+    var salt = "Eech7co8Ohloopo9Ol6baimi",
         location = window.location.pathname;
 
     var rules = {
@@ -2504,20 +2498,57 @@ define('app/api',["q"], function(Q) {
         "/count": [200]
     };
 
-    // guess Isso API location
-    var js = document.getElementsByTagName("script");
+    /*
+     * Detect Isso API endpoint. There are typically two use cases:
+     *
+     *   1. use minified, single-file JavaScript. The browser interprets
+     *      scripts sequentially, thus we can safely use the last script
+     *      tag. Then, we chop off some characters -- /js/embed.min.s --
+     *      and we're done.
+     *
+     *      If the script is not served by Isso directly, a custom data
+     *      attribute can be used to override the default detection
+     *      mechanism:
+     *
+     *      .. code-block:: html
+     *
+     *          <script data-isso="http://example.tld/path/" src="/.../embed.min.js"></script>
+     *
+     *   2. use require.js (during development). When using require.js, we
+     *      assume that the path to the scripts ends with `/js/`.
+     */
+
+    var script, endpoint,
+        js = document.getElementsByTagName("script");
+
     for (var i = 0; i < js.length; i++) {
-        if (js[i].src.match("/js/components/requirejs/require\\.js$")) {
-            endpoint = js[i].src.substring(0, js[i].src.length - 35);
-            break;
-        } else if (js[i].src.match("/js/(embed|count)\\.(min|dev)\\.js$")) {
-            endpoint = js[i].src.substring(0, js[i].src.length - 16);
-            break;
+        if (js[i].dataset.isso !== undefined) {
+            endpoint = js[i].dataset.isso;
+        } else if (js[i].src.match("require\\.js$")) {
+            endpoint = js[i].dataset.main.replace(/\/js\/(embed|count)$/, "");
         }
     }
 
     if (! endpoint) {
-        throw "no Isso API location found";
+        for (i = 0; i < js.length; i++) {
+            if (js[i].hasAttribute("async") || js[i].hasAttribute("defer")) {
+                throw "Isso's automatic configuration detection failed, please " +
+                      "refer to https://github.com/posativ/isso#client-configuration " +
+                      "and add a custom `data-isso-prefix` attribute.";
+            }
+        }
+
+        script = js[js.length - 1];
+
+        if (script.dataset.prefix) {
+            endpoint = script.dataset.prefix;
+        } else {
+            endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
+        }
+    }
+
+    if (endpoint[endpoint.length - 1] === "/") {
+        endpoint = endpoint.substring(0, endpoint.length - 1);
     }
 
     var curl = function(method, url, data) {
@@ -2528,6 +2559,11 @@ define('app/api',["q"], function(Q) {
         function onload() {
 
             var rule = url.replace(endpoint, "").split("?", 1)[0];
+            var cookie = xhr.getResponseHeader("X-Set-Cookie");
+
+            if (cookie && cookie.match(/^isso-/)) {
+                document.cookie = cookie;
+            }
 
             if (rule in rules && rules[rule].indexOf(xhr.status) === -1) {
                 response.reject(xhr.responseText);
@@ -2618,14 +2654,17 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    remote_addr = curl("GET", endpoint + "/check-ip", null).then(function(rv) {
-        return rv.body;
-    });
+    var remote_addr = function() {
+        return curl("GET", endpoint + "/check-ip", null).then(function(rv) {
+                return rv.body;
+        });
+    };
 
     return {
         endpoint: endpoint,
-        remote_addr: remote_addr,
         salt: salt,
+
+        remote_addr: remote_addr,
 
         create: create,
         modify: modify,

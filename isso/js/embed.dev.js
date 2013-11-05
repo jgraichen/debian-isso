@@ -2480,11 +2480,6 @@ return Q;
 
 });
 
-/*
- * Copyright 2013, Martin Zimmermann <info@posativ.org>. All rights reserved.
- * License: BSD Style, 2 clauses. See isso/__init__.py.
- */
-
 define('app/api',["q"], function(Q) {
 
     
@@ -2492,8 +2487,7 @@ define('app/api',["q"], function(Q) {
     Q.stopUnhandledRejectionTracking();
     Q.longStackSupport = true;
 
-    var endpoint = null, remote_addr = null,
-        salt = "Eech7co8Ohloopo9Ol6baimi",
+    var salt = "Eech7co8Ohloopo9Ol6baimi",
         location = window.location.pathname;
 
     var rules = {
@@ -2504,20 +2498,57 @@ define('app/api',["q"], function(Q) {
         "/count": [200]
     };
 
-    // guess Isso API location
-    var js = document.getElementsByTagName("script");
+    /*
+     * Detect Isso API endpoint. There are typically two use cases:
+     *
+     *   1. use minified, single-file JavaScript. The browser interprets
+     *      scripts sequentially, thus we can safely use the last script
+     *      tag. Then, we chop off some characters -- /js/embed.min.s --
+     *      and we're done.
+     *
+     *      If the script is not served by Isso directly, a custom data
+     *      attribute can be used to override the default detection
+     *      mechanism:
+     *
+     *      .. code-block:: html
+     *
+     *          <script data-isso="http://example.tld/path/" src="/.../embed.min.js"></script>
+     *
+     *   2. use require.js (during development). When using require.js, we
+     *      assume that the path to the scripts ends with `/js/`.
+     */
+
+    var script, endpoint,
+        js = document.getElementsByTagName("script");
+
     for (var i = 0; i < js.length; i++) {
-        if (js[i].src.match("/js/components/requirejs/require\\.js$")) {
-            endpoint = js[i].src.substring(0, js[i].src.length - 35);
-            break;
-        } else if (js[i].src.match("/js/(embed|count)\\.(min|dev)\\.js$")) {
-            endpoint = js[i].src.substring(0, js[i].src.length - 16);
-            break;
+        if (js[i].dataset.isso !== undefined) {
+            endpoint = js[i].dataset.isso;
+        } else if (js[i].src.match("require\\.js$")) {
+            endpoint = js[i].dataset.main.replace(/\/js\/(embed|count)$/, "");
         }
     }
 
     if (! endpoint) {
-        throw "no Isso API location found";
+        for (i = 0; i < js.length; i++) {
+            if (js[i].hasAttribute("async") || js[i].hasAttribute("defer")) {
+                throw "Isso's automatic configuration detection failed, please " +
+                      "refer to https://github.com/posativ/isso#client-configuration " +
+                      "and add a custom `data-isso-prefix` attribute.";
+            }
+        }
+
+        script = js[js.length - 1];
+
+        if (script.dataset.prefix) {
+            endpoint = script.dataset.prefix;
+        } else {
+            endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
+        }
+    }
+
+    if (endpoint[endpoint.length - 1] === "/") {
+        endpoint = endpoint.substring(0, endpoint.length - 1);
     }
 
     var curl = function(method, url, data) {
@@ -2528,6 +2559,11 @@ define('app/api',["q"], function(Q) {
         function onload() {
 
             var rule = url.replace(endpoint, "").split("?", 1)[0];
+            var cookie = xhr.getResponseHeader("X-Set-Cookie");
+
+            if (cookie && cookie.match(/^isso-/)) {
+                document.cookie = cookie;
+            }
 
             if (rule in rules && rules[rule].indexOf(xhr.status) === -1) {
                 response.reject(xhr.responseText);
@@ -2618,14 +2654,17 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    remote_addr = curl("GET", endpoint + "/check-ip", null).then(function(rv) {
-        return rv.body;
-    });
+    var remote_addr = function() {
+        return curl("GET", endpoint + "/check-ip", null).then(function(rv) {
+                return rv.body;
+        });
+    };
 
     return {
         endpoint: endpoint,
-        remote_addr: remote_addr,
         salt: salt,
+
+        remote_addr: remote_addr,
 
         create: create,
         modify: modify,
@@ -3035,6 +3074,7 @@ define('app/text/html',["text!./postbox.html", "text!./comment.html"], function 
         comment: comment
     };
 });
+
 define('app/dom',[],function() {
 
     
@@ -3774,6 +3814,7 @@ define('app/text/svg',["text!./forward.svg", "text!./arrow-down.svg", "text!./ar
         "arrow-up": arrup
     };
 });
+
 define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark, i18n, svg) {
 
     
@@ -3832,12 +3873,6 @@ define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark
         }
     };
 });
-/* Copyright 2013, Martin Zimmermann <info@posativ.org>. All rights reserved.
- * License: BSD Style, 2 clauses. See isso/__init__.py.
- *
- * utility functions
- */
-
 define('app/utils',["app/markup"], function(Mark) {
 
     // return `cookie` string if set
@@ -3877,6 +3912,7 @@ define('app/utils',["app/markup"], function(Mark) {
         ago: ago
     };
 });
+
 define('app/lib/identicons',["q"], function(Q) {
 
     
@@ -4588,7 +4624,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
         $(".textarea-wrapper > textarea", el).on("focus", function() {
             if ($(".avatar svg", el).getAttribute("className") === "blank") {
                 $(".avatar svg", el).replace(
-                    lib.identicons.generate(lib.pbkdf2(api.remote_addr, api.salt, 1000, 6), 4, 48));
+                    lib.identicons.generate(lib.pbkdf2(api.remote_addr(), api.salt, 1000, 6), 4, 48));
             }
         });
 
@@ -4599,7 +4635,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
                 clearTimeout(active);
             }
             active = setTimeout(function() {
-                lib.pbkdf2($(".input-wrapper > [type=email]", el).value || api.remote_addr, api.salt, 1000, 6)
+                lib.pbkdf2($(".input-wrapper > [type=email]", el).value || api.remote_addr(), api.salt, 1000, 6)
                 .then(function(rv) {
                     $(".avatar svg", el).replace(lib.identicons.generate(rv, 4, 48));
                 });
@@ -4811,7 +4847,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
 
         // remove edit and delete buttons when cookie is gone
         var clear = function(button) {
-            if (! utils.cookie(comment.id)) {
+            if (! utils.cookie("isso-" + comment.id)) {
                 $(button, footer).remove();
             } else {
                 setTimeout(function() { clear(button); }, 15*1000);
@@ -4823,14 +4859,14 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
 
         // show direct reply to own comment when cookie is max aged
         var show = function(el) {
-            if (utils.cookie(comment.id)) {
+            if (utils.cookie("isso-" + comment.id)) {
                 setTimeout(function() { show(el); }, 15*1000);
             } else {
                 footer.append(el);
             }
         };
 
-        if (utils.cookie(comment.id)) {
+        if (utils.cookie("isso-" + comment.id)) {
             show($("a.reply", footer).detach());
         }
     };
@@ -4856,16 +4892,28 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
         });
     };
 });
-require(["ready", "app/api", "app/isso", "app/count", "app/dom", "app/markup"], function(domready, api, isso, count, $, Mark) {
+define('text!app/../../css/isso.css',[],function () { return '* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\na {\n  text-decoration: none; }\n\n.isso-popup {\n  font-family: Helvetica, Arial, sans-serif;\n  font-size: 0.8em;\n  padding: 6px 8px;\n  margin-left: 20px;\n  border: 1px solid #f27a7a;\n  border-radius: 2px;\n  background-color: #f2dede;\n  z-index: 9002; }\n\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n  .isso-comment:after {\n    clear: both; }\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n    .isso-comment > div.text-wrapper > div.textarea-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      font: inherit; }\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n  .postbox:after {\n    clear: both; }\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n    .postbox > .form-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      min-height: 48px;\n      font: inherit; }\n      .postbox > .form-wrapper textarea::-webkit-input-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea::-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-ms-input-placeholder {\n        color: #AAA; }\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
+
+define('app/text/css',["text!../../../css/isso.css"], function(isso) {
+    return {
+        inline: isso
+    };
+});
+
+/*
+ * Copyright 2013, Martin Zimmermann <info@posativ.org>. All rights reserved.
+ * Distributed under the MIT license
+ */
+
+require(["ready", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, api, isso, count, $, Mark, css) {
 
     
 
     domready(function() {
-        var css = $.new("link");
-        css.type = "text/css";
-        css.rel = "stylesheet";
-        css.href = api.endpoint + "/css/isso.css";
-        $("head").append(css);
+        var style = $.new("style");
+        style.type = "text/css";
+        style.textContent = css.inline;
+        $("head").append(style);
 
         count();
 
