@@ -5,10 +5,11 @@ import json
 import time
 import hashlib
 import logging
-import sqlite3
+import functools
 
 from itsdangerous import SignatureExpired, BadSignature
 
+from werkzeug.http import dump_cookie
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 
@@ -54,11 +55,14 @@ def new(app, environ, request, uri):
     for field in set(data.keys()) - set(['text', 'author', 'website', 'email', 'parent']):
         data.pop(field)
 
-    if not data.get("text"):
+    if "text" not in data or data["text"] is None or len(data["text"]) < 3:
         raise BadRequest("no text given")
 
     if "id" in data and not isinstance(data["id"], int):
         raise BadRequest("parent id must be an integer")
+
+    if len(data.get("email") or "") > 254:
+        raise BadRequest("http://tools.ietf.org/html/rfc5321#section-4.5.3")
 
     for field in ("author", "email"):
         if data.get(field):
@@ -105,7 +109,9 @@ def new(app, environ, request, uri):
     checksum = hashlib.md5(rv["text"].encode('utf-8')).hexdigest()
 
     rv["text"] = app.markdown(rv["text"])
-    rv["hash"] = str(pbkdf2(rv.get('email') or rv['remote_addr'], app.salt, 1000, 6))
+    rv["hash"] = str(pbkdf2(rv['email'] or rv['remote_addr'], app.salt, 1000, 6))
+
+    app.cache.set('hash', (rv['email'] or rv['remote_addr']).encode('utf-8'), rv['hash'])
 
     for key in set(rv.keys()) - FIELDS:
         rv.pop(key)
@@ -113,9 +119,13 @@ def new(app, environ, request, uri):
     # success!
     logger.info('comment created: %s', json.dumps(rv))
 
-    resp = Response(json.dumps(rv), 202 if rv["mode"] == 2 else 201,
-        content_type='application/json')
-    resp.set_cookie(str(rv["id"]), app.sign([rv["id"], checksum]), max_age=app.conf.getint('general', 'max-age'))
+    cookie = functools.partial(dump_cookie,
+        value=app.sign([rv["id"], checksum]),
+        max_age=app.conf.getint('general', 'max-age'))
+
+    resp = Response(json.dumps(rv), 202 if rv["mode"] == 2 else 201, content_type='application/json')
+    resp.headers.add("Set-Cookie", cookie(str(rv["id"])))
+    resp.headers.add("X-Set-Cookie", cookie("isso-%i" % rv["id"]))
     return resp
 
 
@@ -152,7 +162,7 @@ def single(app, environ, request, id):
     if request.method == 'PUT':
         data = request.get_json()
 
-        if data.get("text") is not None and len(data['text']) < 3:
+        if "text" not in data or data["text"] is None or len(data["text"]) < 3:
             raise BadRequest("no text given")
 
         for key in set(data.keys()) - set(["text", "author", "website"]):
@@ -171,14 +181,19 @@ def single(app, environ, request, id):
         checksum = hashlib.md5(rv["text"].encode('utf-8')).hexdigest()
         rv["text"] = app.markdown(rv["text"])
 
+        cookie = functools.partial(dump_cookie,
+                value=app.sign([rv["id"], checksum]),
+                max_age=app.conf.getint('general', 'max-age'))
+
         resp = Response(json.dumps(rv), 200, content_type='application/json')
-        resp.set_cookie(str(rv["id"]), app.sign([rv["id"], checksum]), max_age=app.conf.getint('general', 'max-age'))
+        resp.headers.add("Set-Cookie", cookie(str(rv["id"])))
+        resp.headers.add("X-Set-Cookie", cookie("isso-%i" % rv["id"]))
         return resp
 
     if request.method == 'DELETE':
 
         item = app.db.comments.get(id)
-        app.cache.delete('hash', item['email'] or item['remote_addr'])
+        app.cache.delete('hash', (item['email'] or item['remote_addr']).encode('utf-8'))
 
         rv = app.db.comments.delete(id)
         if rv:
@@ -187,8 +202,11 @@ def single(app, environ, request, id):
 
         logger.info('comment %i deleted', id)
 
+        cookie = functools.partial(dump_cookie, expires=0, max_age=0)
+
         resp = Response(json.dumps(rv), 200, content_type='application/json')
-        resp.delete_cookie(str(id), path='/')
+        resp.headers.add("Set-Cookie", cookie(str(id)))
+        resp.headers.add("X-Set-Cookie", cookie("isso-%i" % id))
         return resp
 
 
@@ -202,11 +220,11 @@ def fetch(app, environ, request, uri):
     for item in rv:
 
         key = item['email'] or item['remote_addr']
-        val = app.cache.get('hash', key)
+        val = app.cache.get('hash', key.encode('utf-8'))
 
         if val is None:
             val = str(pbkdf2(key, app.salt, 1000, 6))
-            app.cache.set('hash', key, val)
+            app.cache.set('hash', key.encode('utf-8'), val)
 
         item['hash'] = val
 
