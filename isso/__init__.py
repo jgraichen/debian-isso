@@ -30,33 +30,45 @@ from __future__ import print_function
 import pkg_resources
 dist = pkg_resources.get_distribution("isso")
 
+try:
+    import uwsgi
+except ImportError:
+    uwsgi = None
+    try:
+        import gevent.monkey; gevent.monkey.patch_all()
+    except ImportError:
+        gevent = None
+
 import sys
 import os
+import errno
 import logging
+import tempfile
 
 from os.path import dirname, join
 from argparse import ArgumentParser
+from functools import partial, reduce
 
-try:
-    import httplib
-except ImportError:
-    import http.client as httplib
-
-import misaka
 from itsdangerous import URLSafeTimedSerializer
 
-from werkzeug.routing import Map, Rule
-from werkzeug.wrappers import Response
+from werkzeug.routing import Map
 from werkzeug.exceptions import HTTPException, InternalServerError
 
 from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.local import Local, LocalManager
 from werkzeug.serving import run_simple
 from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.contrib.profiler import ProfilerMiddleware
 
-from isso import db, migrate, views, wsgi
-from isso.core import ThreadedMixin, uWSGIMixin, Config
-from isso.utils import parse, http, JSONRequest
-from isso.views import comment
+local = Local()
+local_manager = LocalManager([local])
+
+from isso import db, migrate, wsgi, ext, views
+from isso.core import ThreadedMixin, ProcessMixin, uWSGIMixin, Config
+from isso.utils import parse, http, JSONRequest, origin
+from isso.views import comments
+
+from isso.ext.notifications import Stdout, SMTP
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 logging.basicConfig(
@@ -69,37 +81,6 @@ logger = logging.getLogger("isso")
 class Isso(object):
 
     salt = b"Eech7co8Ohloopo9Ol6baimi"
-    urls = Map([
-        Rule('/new', methods=['POST'], endpoint=views.comment.new),
-
-        Rule('/id/<int:id>', methods=['GET', 'PUT', 'DELETE'], endpoint=views.comment.single),
-        Rule('/id/<int:id>/like', methods=['POST'], endpoint=views.comment.like),
-        Rule('/id/<int:id>/dislike', methods=['POST'], endpoint=views.comment.dislike),
-
-        Rule('/', methods=['GET'], endpoint=views.comment.fetch),
-        Rule('/count', methods=['GET'], endpoint=views.comment.count),
-        Rule('/delete/<string:auth>', endpoint=views.comment.delete),
-        Rule('/activate/<string:auth>', endpoint=views.comment.activate),
-
-        Rule('/check-ip', endpoint=views.comment.checkip)
-    ])
-
-    @classmethod
-    def CORS(cls, request, response, hosts):
-        for host in hosts:
-            if request.environ.get("HTTP_ORIGIN", None) == host.rstrip("/"):
-                origin = host.rstrip("/")
-                break
-        else:
-            origin = host.rstrip("/")
-
-        hdrs = response.headers
-        hdrs["Access-Control-Allow-Origin"] = origin
-        hdrs["Access-Control-Allow-Headers"] = "Origin, Content-Type"
-        hdrs["Access-Control-Allow-Credentials"] = "true"
-        hdrs["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE"
-
-        return response
 
     def __init__(self, conf):
 
@@ -109,19 +90,32 @@ class Isso(object):
 
         super(Isso, self).__init__(conf)
 
+        subscribers = []
+        subscribers.append(Stdout(None))
+
+        if conf.get("general", "notify") == "smtp":
+            subscribers.append(SMTP(self))
+
+        self.signal = ext.Signal(*subscribers)
+
+        self.urls = Map()
+
+        views.Info(self)
+        comments.API(self)
+
     def sign(self, obj):
         return self.signer.dumps(obj)
 
     def unsign(self, obj, max_age=None):
         return self.signer.loads(obj, max_age=max_age or self.conf.getint('general', 'max-age'))
 
-    def markdown(self, text):
-        return misaka.html(text, extensions=misaka.EXT_STRIKETHROUGH
-            | misaka.EXT_SUPERSCRIPT | misaka.EXT_AUTOLINK
-            | misaka.HTML_SKIP_HTML  | misaka.HTML_SKIP_IMAGES | misaka.HTML_SAFELINK)
-
     def dispatch(self, request):
-        adapter = Isso.urls.bind_to_environ(request.environ)
+        local.request = request
+
+        local.host = wsgi.host(request.environ)
+        local.origin = origin(self.conf.getiter("general", "host"))(request.environ)
+
+        adapter = self.urls.bind_to_environ(request.environ)
 
         try:
             handler, values = adapter.match()
@@ -129,7 +123,7 @@ class Isso(object):
             return e
         else:
             try:
-                response = handler(self, request.environ, request, **values)
+                response = handler(request.environ, request, **values)
             except HTTPException as e:
                 return e
             except Exception:
@@ -139,7 +133,6 @@ class Isso(object):
                 return response
 
     def wsgi_app(self, environ, start_response):
-
         response = self.dispatch(JSONRequest(environ))
         return response(environ, start_response)
 
@@ -149,13 +142,14 @@ class Isso(object):
 
 def make_app(conf=None):
 
-    try:
-        import uwsgi
-    except ImportError:
+    if uwsgi:
+        class App(Isso, uWSGIMixin):
+            pass
+    elif gevent or sys.argv[0].endswith("isso"):
         class App(Isso, ThreadedMixin):
             pass
     else:
-        class App(Isso, uWSGIMixin):
+        class App(Isso, ProcessMixin):
             pass
 
     isso = App(conf)
@@ -163,24 +157,27 @@ def make_app(conf=None):
     for host in conf.getiter("general", "host"):
         with http.curl('HEAD', host, '/', 5) as resp:
             if resp is not None:
-                logger.info("connected to HTTP server")
+                logger.info("connected to %s", host)
                 break
     else:
-        logger.warn("unable to connect to HTTP server")
+        logger.warn("unable to connect to %s", ", ".join(conf.getiter("general", "host")))
+
+    wrapper = [local_manager.make_middleware]
 
     if isso.conf.getboolean("server", "profile"):
-        from werkzeug.contrib.profiler import ProfilerMiddleware
-        isso = ProfilerMiddleware(isso, sort_by=("cumtime", ), restrictions=("isso/(?!lib)", ))
+        wrapper.append(partial(ProfilerMiddleware,
+            sort_by=("cumtime", ), restrictions=("isso/(?!lib)", 10)))
 
-    app = ProxyFix(
-            wsgi.SubURI(
-                wsgi.CORSMiddleware(
-                    SharedDataMiddleware(isso, {
-                        '/js': join(dirname(__file__), 'js/'),
-                        '/css': join(dirname(__file__), 'css/')}),
-                    list(isso.conf.getiter("general", "host")))))
+    wrapper.append(partial(SharedDataMiddleware, exports={
+        '/js': join(dirname(__file__), 'js/'),
+        '/css': join(dirname(__file__), 'css/')}))
 
-    return app
+    wrapper.append(partial(wsgi.CORSMiddleware,
+        origin=origin(isso.conf.getiter("general", "host"))))
+
+    wrapper.extend([wsgi.SubURI, ProxyFix])
+
+    return reduce(lambda x, f: f(x), wrapper, isso)
 
 
 def main():
@@ -194,6 +191,8 @@ def main():
 
     imprt = subparser.add_parser('import', help="import Disqus XML export")
     imprt.add_argument("dump", metavar="FILE")
+    imprt.add_argument("-n", "--dry-run", dest="dryrun", action="store_true",
+                       help="perform a trial run with no changes made")
 
     serve = subparser.add_parser("run", help="run server")
 
@@ -201,16 +200,26 @@ def main():
     conf = Config.load(args.conf)
 
     if args.command == "import":
+        xxx = tempfile.NamedTemporaryFile()
+        dbpath = conf.get("general", "dbpath") if not args.dryrun else xxx.name
+
         conf.set("guard", "enabled", "off")
-        migrate.disqus(db.SQLite3(conf.get('general', 'dbpath'), conf), args.dump)
+        migrate.disqus(db.SQLite3(dbpath, conf), args.dump)
         sys.exit(0)
 
-    run_simple(conf.get('server', 'host'), conf.getint('server', 'port'), make_app(conf),
-               threaded=True, use_reloader=conf.getboolean('server', 'reload'))
-
-try:
-    import uwsgi
-except ImportError:
-    pass
-else:
-    application = make_app(Config.load(os.environ.get('ISSO_SETTINGS')))
+    if conf.get("server", "listen").startswith("http://"):
+        host, port, _ = parse.host(conf.get("server", "listen"))
+        try:
+            from gevent.pywsgi import WSGIServer
+            WSGIServer((host, port), make_app(conf)).serve_forever()
+        except ImportError:
+            run_simple(host, port, make_app(conf), threaded=True,
+                       use_reloader=conf.getboolean('server', 'reload'))
+    else:
+        sock = conf.get("server", "listen").partition("unix://")[2]
+        try:
+            os.unlink(sock)
+        except OSError as ex:
+            if ex.errno != errno.ENOENT:
+                raise
+        wsgi.SocketHTTPServer(sock, make_app(conf)).serve_forever()

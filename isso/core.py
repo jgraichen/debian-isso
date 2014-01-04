@@ -5,12 +5,10 @@ from __future__ import print_function
 import io
 import os
 import time
+import logging
 import binascii
 import threading
-import logging
-
-import socket
-import smtplib
+import multiprocessing
 
 from configparser import ConfigParser
 
@@ -26,13 +24,31 @@ if PY2K:
 else:
     import _thread as thread
 
-from isso import notify
 from isso.utils import parse
 from isso.compat import text_type as str
 
 from werkzeug.contrib.cache import NullCache, SimpleCache
 
 logger = logging.getLogger("isso")
+
+
+class Section:
+
+    def __init__(self, conf, section):
+        self.conf = conf
+        self.section = section
+
+    def get(self, key):
+        return self.conf.get(self.section, key)
+
+    def getint(self, key):
+        return self.conf.getint(self.section, key)
+
+    def getiter(self, key):
+        return self.conf.getiter(self.section, key)
+
+    def getboolean(self, key):
+        return self.conf.getboolean(self.section, key)
 
 
 class IssoParser(ConfigParser):
@@ -81,18 +97,23 @@ class IssoParser(ConfigParser):
             if item:
                 yield item
 
+    def section(self, section):
+        return Section(self, section)
+
 
 class Config:
 
     default = [
         "[general]",
+        "name = ",
         "dbpath = /tmp/isso.db", "session-key = %r" % binascii.b2a_hex(os.urandom(24)),
         "host = http://localhost:8080/", "max-age = 15m",
+        "notify = ",
         "[moderation]",
         "enabled = false",
         "purge-after = 30d",
         "[server]",
-        "host = localhost", "port = 8080",
+        "listen = http://localhost:8080/",
         "reload = off", "profile = off",
         "[smtp]",
         "username = ", "password = ",
@@ -100,8 +121,9 @@ class Config:
         "to = ", "from = ",
         "[guard]",
         "enabled = true",
-        "ratelimit = 2"
-        ""
+        "ratelimit = 2",
+        "direct-reply = 3",
+        "reply-to-self = false"
     ]
 
     @classmethod
@@ -124,20 +146,15 @@ class Config:
         if diff:
             for item in diff:
                 logger.warn("no such option: [%s] %s", *item)
+                if item in (("server", "host"), ("server", "port")):
+                    logger.warn("use `listen = http://$host:$port` instead")
+
+        if rv.get("smtp", "username") and not rv.get("general", "notify"):
+            logger.warn(("SMTP is no longer enabled by default, add "
+                         "`notify = smtp` to the general section to "
+                         "enable SMTP nofications."))
 
         return rv
-
-
-def SMTP(conf):
-
-    try:
-        mailer = notify.SMTPMailer(conf)
-        logger.info("connected to SMTP server")
-    except (socket.error, smtplib.SMTPException):
-        logger.warn("unable to connect to SMTP server")
-        mailer = notify.NullMailer()
-
-    return mailer
 
 
 class Cache:
@@ -188,19 +205,7 @@ class ThreadedMixin(Mixin):
         if conf.getboolean("moderation", "enabled"):
             self.purge(conf.getint("moderation", "purge-after"))
 
-        self.mailer = SMTP(conf)
         self.cache = Cache(SimpleCache(threshold=1024, default_timeout=3600))
-
-    @threaded
-    def notify(self, subject, body, retries=5):
-
-        for x in range(retries):
-            try:
-                self.mailer.sendmail(subject, body)
-            except Exception:
-                time.sleep(60)
-            else:
-                break
 
     @threaded
     def purge(self, delta):
@@ -208,6 +213,14 @@ class ThreadedMixin(Mixin):
             with self.lock:
                 self.db.comments.purge(delta)
             time.sleep(delta)
+
+
+class ProcessMixin(ThreadedMixin):
+
+    def __init__(self, conf):
+
+        super(ProcessMixin, self).__init__(conf)
+        self.lock = multiprocessing.Lock()
 
 
 class uWSGICache(object):
@@ -238,26 +251,7 @@ class uWSGIMixin(Mixin):
 
         super(uWSGIMixin, self).__init__(conf)
 
-        class Lock():
-
-            def __enter__(self):
-                uwsgi.lock()
-
-            def __exit__(self, exc_type, exc_val, exc_tb):
-                uwsgi.unlock()
-
-        def spooler(args):
-            try:
-                self.mailer.sendmail(args["subject"].decode('utf-8'), args["body"].decode('utf-8'))
-            except smtplib.SMTPConnectError:
-                return uwsgi.SPOOL_RETRY
-            else:
-                return uwsgi.SPOOL_OK
-
-        uwsgi.spooler = spooler
-
-        self.lock = Lock()
-        self.mailer = SMTP(conf)
+        self.lock = multiprocessing.Lock()
         self.cache = uWSGICache
 
         timedelta = conf.getint("moderation", "purge-after")
@@ -267,6 +261,3 @@ class uWSGIMixin(Mixin):
 
         # run purge once
         purge(1)
-
-    def notify(self, subject, body, retries=5):
-        uwsgi.spool({"subject": subject.encode('utf-8'), "body": body.encode('utf-8')})

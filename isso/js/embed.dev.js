@@ -542,6 +542,33 @@ define('ready',[],function () {
     return domReady;
 });
 
+define('app/config',[],function() {
+    
+
+    var config = {
+        "css": true,
+        "lang": (navigator.language || navigator.userLanguage).split("-")[0],
+        "reply-to-self": false
+    };
+
+    var js = document.getElementsByTagName("script");
+
+    for (var i = 0; i < js.length; i++) {
+        [].forEach.call(js[i].attributes, function(attr) {
+            if (/^data-isso-/.test(attr.name)) {
+                try {
+                    config[attr.name.substring(10)] = JSON.parse(attr.value);
+                } catch (ex) {
+                    config[attr.name.substring(10)] = attr.value;
+                }
+            }
+        });
+    }
+
+    return config;
+
+});
+
 // vim:ts=4:sts=4:sw=4:
 /*!
  *
@@ -2513,40 +2540,32 @@ define('app/api',["q"], function(Q) {
      *      .. code-block:: html
      *
      *          <script data-isso="http://example.tld/path/" src="/.../embed.min.js"></script>
-     *
-     *   2. use require.js (during development). When using require.js, we
-     *      assume that the path to the scripts ends with `/js/`.
      */
 
     var script, endpoint,
         js = document.getElementsByTagName("script");
 
     for (var i = 0; i < js.length; i++) {
-        if (js[i].dataset.isso !== undefined) {
-            endpoint = js[i].dataset.isso;
-        } else if (js[i].src.match("require\\.js$")) {
-            endpoint = js[i].dataset.main.replace(/\/js\/(embed|count)$/, "");
+        if (js[i].hasAttribute("data-isso")) {
+            endpoint = js[i].getAttribute("data-isso");
+            break;
         }
     }
 
     if (! endpoint) {
         for (i = 0; i < js.length; i++) {
-            if (js[i].hasAttribute("async") || js[i].hasAttribute("defer")) {
+            if (js[i].getAttribute("async") || js[i].getAttribute("defer")) {
                 throw "Isso's automatic configuration detection failed, please " +
                       "refer to https://github.com/posativ/isso#client-configuration " +
-                      "and add a custom `data-isso-prefix` attribute.";
+                      "and add a custom `data-isso` attribute.";
             }
         }
 
         script = js[js.length - 1];
-
-        if (script.dataset.prefix) {
-            endpoint = script.dataset.prefix;
-        } else {
-            endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
-        }
+        endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
     }
 
+    //  strip trailing slash
     if (endpoint[endpoint.length - 1] === "/") {
         endpoint = endpoint.substring(0, endpoint.length - 1);
     }
@@ -2574,7 +2593,9 @@ define('app/api',["q"], function(Q) {
 
         try {
             xhr.open(method, url, true);
-            xhr.withCredentials = true;  // fuck you, fuck you, fuck you IE
+            xhr.withCredentials = true;
+            xhr.setRequestHeader("Content-Type", "application/json");
+
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     onload();
@@ -2599,8 +2620,8 @@ define('app/api',["q"], function(Q) {
         return rv.substring(0, rv.length - 1);  // chop off trailing "&"
     };
 
-    var create = function(data) {
-        return curl("POST", endpoint + "/new?" + qs({uri: location}), JSON.stringify(data)).then(
+    var create = function(tid, data) {
+        return curl("POST", endpoint + "/new?" + qs({uri: tid || location}), JSON.stringify(data)).then(
             function (rv) { return JSON.parse(rv.body); });
     };
 
@@ -2625,9 +2646,9 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    var fetch = function(plain) {
+    var fetch = function(tid) {
 
-        return curl("GET", endpoint + "/?" + qs({uri: location, plain: plain}), null).then(function (rv) {
+        return curl("GET", endpoint + "/?" + qs({uri: tid || location}), null).then(function (rv) {
             if (rv.status === 200) {
                 return JSON.parse(rv.body);
             } else {
@@ -2636,8 +2657,8 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    var count = function(uri) {
-        return curl("GET", endpoint + "/count?" + qs({uri: uri}), null).then(function(rv) {
+    var count = function(tid) {
+        return curl("GET", endpoint + "/count?" + qs({uri: tid || location}), null).then(function(rv) {
             return JSON.parse(rv.body);
         });
     };
@@ -3772,21 +3793,121 @@ define('app/i18n/en',{
     "date-month": "last month\n{{ n }} months ago",
     "date-year": "last year\n{{ n }} years ago"
 });
-define('app/i18n',["app/i18n/de", "app/i18n/en"], function(de, en) {
+define('app/i18n/fr',{
+    "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
+    "postbox-author": "Nom (optionel)",
+    "postbox-email": "Courriel (optionel)",
+    "postbox-submit": "Soumettre",
+
+    "num-comments": "Un commentaire\n{{ n }} commentaires",
+    "no-comments": "Aucun commentaire pour l'instant",
+
+    "comment-reply": "Répondre",
+    "comment-edit": "Éditer",
+    "comment-save": "Enregistrer",
+    "comment-delete": "Supprimer",
+    "comment-confirm": "Confirmer",
+    "comment-close": "Fermer",
+    "comment-cancel": "Annuler",
+    "comment-deleted": "Commentaire supprimé.",
+    "comment-queued": "Commentaire en attente de modération.",
+    "comment-anonymous": "Anonyme",
+
+    "date-now": "À l'instant'",
+    "date-minute": "Il y a une minute \n{{ n }} minutes",
+    "date-hour": "Il y a une heure\n{{ n }} heures ",
+    "date-day": "Hier\n{{ n }} jours auparavant",
+    "date-week": "Il y a une semaine\n{{ n }} semaines",
+    "date-month": "Il y a un mois\n{{ n }} mois",
+    "date-year": "Il y a un an\n{{ n }} ans"
+});
+
+define('app/i18n/ru',{
+    "postbox-text" : "Комментировать здесь  (миниум 3 символа)",
+    "postbox-author" : "Имя (необязательно)",
+    "postbox-email" : "Email (необязательно)",
+    "postbox-submit": "Отправить",
+
+    "num-comments": "1 Комментарий\n{{ n }} Комментарии",
+    "no-comments": "Нет Комментарев",
+
+    "comment-reply": "Ответить",
+    "comment-edit": "Правка",
+    "comment-save": "Сохранить",
+    "comment-delete": "Удалить",
+    "comment-confirm": "Подтвердить",
+    "comment-close": "Закрыть",
+    "comment-cancel": "Отменить",
+    "comment-deleted": "Удалить комментарий",
+    "comment-queued": "Комментарий должен быть разблокирован",
+    "comment-anonymous": "Аномимый",
+
+    "date-now": "Сейчас",
+    "date-minute": "Минут назад\n{{ n }} минут",
+    "date-hour": "Час назад\n{{ n }} часов",
+    "date-day": "Вчера\n{{ n }} дней",
+    "date-week": "на прошлой недели\n{{ n }} недель",
+    "date-month": "в прошоим месяце\n{{ n }} месяцов",
+    "date-year": "в прошлом году\n{{ n }} года\n{{ n }} лет"
+});
+
+define('app/i18n/it',{
+    "postbox-text": "Scrivi un commento qui (minimo 3 caratteri)",
+    "postbox-author": "Nome (opzionale)",
+    "postbox-email": "E-mail (opzionale)",
+    "postbox-submit": "Invia",
+
+    "num-comments": "Un Commento\n{{ n }} Commenti",
+    "no-comments": "Ancora Nessun Commento",
+
+    "comment-reply": "Rispondi",
+    "comment-edit": "Modifica",
+    "comment-save": "Salva",
+    "comment-delete": "Elimina",
+    "comment-confirm": "Conferma",
+    "comment-close": "Chiudi",
+    "comment-cancel": "Cancella",
+    "comment-deleted": "Commento eliminato.",
+    "comment-queued": "Commento in coda per moderazione.",
+    "comment-anonymous": "Anonimo",
+
+    "date-now": "poco fa",
+    "date-minute": "un minuto fa\n{{ n }} minuti fa",
+    "date-hour": "un ora fa\n{{ n }} ore fa",
+    "date-day": "Ieri\n{{ n }} giorni fa",
+    "date-week": "questa settimana\n{{ n }} settimane fa",
+    "date-month": "questo mese\n{{ n }} mesi fa",
+    "date-year": "quest'anno\n{{ n }} anni fa"
+});
+
+define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it"], function(config, de, en, fr, ru, it) {
 
     
 
     // pluralization functions for each language you support
     var plurals = {
-        "en": function (msgs, n) {
+        "en": function(msgs, n) {
             return msgs[n === 1 ? 0 : 1];
+        },
+        "fr": function(msgs, n) {
+            return msgs[n > 1 ? 0 : 1]
+        },
+        "ru": function(msg, n) {
+            if (n % 10 === 1 && n % 100 !== 11) {
+                return msg[0];
+            } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
+                return msg[1];
+            } else {
+                return msg[2] !== undefined ? msg[2] : msg[1];
+            }
         }
     };
 
     plurals["de"] = plurals["en"];
+    plurals["it"] = plurals["en"];
 
-    // the user's language. you can replace this with your own code
-    var lang = (navigator.language || navigator.userLanguage).split("-")[0];
+    // useragent's prefered language (or manually overridden)
+    var lang = config.lang;
 
     // fall back to English
     if (!plurals[lang]) {
@@ -3797,7 +3918,10 @@ define('app/i18n',["app/i18n/de", "app/i18n/en"], function(de, en) {
         plurals: plurals,
         lang: lang,
         de: de,
-        en: en
+        en: en,
+        fr: fr,
+        ru: ru,
+        it: it
     };
 });
 
@@ -3910,6 +4034,28 @@ define('app/utils',["app/markup"], function(Mark) {
     return {
         cookie: cookie,
         ago: ago
+    };
+});
+
+define('app/lib/fancy',[],function() {
+
+    
+
+    // http://chuvash.eu/2011/12/14/the-cleanest-auto-resize-for-a-textarea/
+    var autoresize = function(textarea, minheight) {
+        var offset= !window.opera ? (textarea.offsetHeight - textarea.clientHeight) : (textarea.offsetHeight + parseInt(window.getComputedStyle(textarea, null).getPropertyValue('border-top-width')));
+        ["keyup", "focus"].forEach(function(event) {
+            textarea.on(event, function() {
+                if ((textarea.scrollHeight  + offset ) > minheight) {
+                    textarea.style.height = "auto";
+                    textarea.style.height = (textarea.scrollHeight  + offset ) + 'px';
+                }
+            });
+        });
+    };
+
+    return {
+        autoresize: autoresize
     };
 });
 
@@ -4575,39 +4721,19 @@ define('app/lib/pbkdf2',["q", "app/lib/sha1"], function(Q, sha1) {
         return deferred.promise;
     }
 });
-define('app/lib',['require','app/lib/identicons','app/lib/pbkdf2','app/lib/sha1'],function (require) {
+define('app/lib',['require','app/lib/fancy','app/lib/identicons','app/lib/pbkdf2','app/lib/sha1'],function (require) {
     return {
+        fancy: require("app/lib/fancy"),
         identicons: require("app/lib/identicons"),
         pbkdf2: require("app/lib/pbkdf2"),
         sha1: require("app/lib/sha1")
     };
 });
-define('app/fancy',[],function() {
-
-    
-
-    // http://chuvash.eu/2011/12/14/the-cleanest-auto-resize-for-a-textarea/
-    var autoresize = function(textarea, minheight) {
-        var offset= !window.opera ? (textarea.offsetHeight - textarea.clientHeight) : (textarea.offsetHeight + parseInt(window.getComputedStyle(textarea, null).getPropertyValue('border-top-width')));
-        ["keyup", "focus"].forEach(function(event) {
-            textarea.on(event, function() {
-                if ((textarea.scrollHeight  + offset ) > minheight) {
-                    textarea.style.height = "auto";
-                    textarea.style.height = (textarea.scrollHeight  + offset ) + 'px';
-                }
-            });
-        });
-    };
-
-    return {
-        autoresize: autoresize
-    };
-});
 
 /* Isso – Ich schrei sonst!
  */
-define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/markup", "app/i18n", "app/lib", "app/fancy"],
-    function(templates, $, utils, api, Mark, i18n, lib, fancy) {
+define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/api", "app/markup", "app/i18n", "app/lib"],
+    function(templates, $, utils, config, api, Mark, i18n, lib) {
 
     
 
@@ -4628,7 +4754,8 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             }
         });
 
-        // update identicon, when the user provices an email address
+        // update identicon on email input. Listens on keyup, after 200ms the
+        // new identicon is generated.
         var active;
         $(".input-wrapper > [type=email]", el).on("keyup", function() {
             if (active) {
@@ -4646,6 +4773,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             clearTimeout(active);
         }, false);
 
+        // callback on success (e.g. to toggle the reply button)
         el.onsuccess = function() {};
 
         el.validate = function() {
@@ -4656,12 +4784,14 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             return true;
         };
 
+        // submit form, initialize optional fields with `null` and reset form.
+        // If replied to a comment, remove form completely.
         $("[type=submit]", el).on("click", function() {
             if (! el.validate()) {
                 return;
             }
 
-            api.create({
+            api.create($("#isso-thread").getAttribute("data-isso-id"), {
                 author: $("[name=author]", el).value || null,
                 email: $("[name=email]", el).value || null,
                 text: $("textarea", el).value,
@@ -4681,11 +4811,13 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             });
         });
 
-        fancy.autoresize($("textarea", el), 48);
+        // copy'n'paste sluggy automagically dynamic textarea resize
+        lib.fancy.autoresize($("textarea", el), 48);
 
         return el;
     };
 
+    // lookup table for responses (to link to the parent)
     var map  = {id: {}, name: {}};
 
     var insert = function(comment, scrollIntoView) {
@@ -4697,10 +4829,15 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
 
         var el = $.htmlify(Mark.up(templates["comment"], comment));
 
+        // update datetime every 60 seconds
         var refresh = function() {
-            $(".permalink > date", el).textContent = utils.ago(new Date(parseInt(comment.created, 10) * 1000));
+            $(".permalink > date", el).textContent = utils.ago(
+                new Date(parseInt(comment.created, 10) * 1000));
             setTimeout(refresh, 60*1000);
-        };  refresh();
+        };
+
+        // run once to activate
+        refresh();
 
         $("div.avatar > svg", el).replace(lib.identicons.generate(comment.hash, 4, 48));
 
@@ -4726,7 +4863,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             header = $("#isso-" + comment.id + " > .text-wrapper > .isso-comment-header"),
             text   = $("#isso-" + comment.id + " > .text-wrapper > .text");
 
-        var form = null;
+        var form = null;  // XXX: probably a good place for a closure
         $("a.reply", footer).toggle("click",
             function(toggler) {
                 form = footer.insertAfter(new Postbox(comment.id));
@@ -4749,12 +4886,12 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             });
         }
 
-        var votes = function (value) {
+        // update vote counter, but hide if votes sum to 0
+        var votes = function(value) {
             var span = $("span.votes", footer);
             if (span === null) {
                 if (value === 0) {
                     span.remove();
-                    return;
                 } else {
                     footer.prepend($.new("span.votes", value));
                 }
@@ -4793,7 +4930,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
 
                 api.view(comment.id, 1).then(function(rv) {
                     var textarea = $.new("textarea", rv.text);
-                    fancy.autoresize(textarea, 48);
+                    lib.fancy.autoresize(textarea, 48);
                     text.className = "textarea-wrapper";
                     text.textContent = "";
                     text.append(textarea);
@@ -4839,6 +4976,8 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
                     } else {
                         $("span.note", header).textContent = msgs["comment-deleted"];
                         text.innerHTML = "<p>&nbsp;</p>";
+                        $("a.edit", footer).remove()
+                        $("a.delete", footer).remove()
                     }
                     del.textContent = msgs["comment-delete"];
                 });
@@ -4848,7 +4987,9 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
         // remove edit and delete buttons when cookie is gone
         var clear = function(button) {
             if (! utils.cookie("isso-" + comment.id)) {
-                $(button, footer).remove();
+                if ($(button, footer) !== null) {
+                    $(button, footer).remove();
+                }
             } else {
                 setTimeout(function() { clear(button); }, 15*1000);
             }
@@ -4866,7 +5007,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/api", "app/mark
             }
         };
 
-        if (utils.cookie("isso-" + comment.id)) {
+        if (! config["reply-to-self"] && utils.cookie("isso-" + comment.id)) {
             show($("a.reply", footer).detach());
         }
     };
@@ -4884,15 +5025,18 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                 return;
             }
 
-            var uri = el.href.match("^(.+)#isso-thread$")[1]
+            var tid = el.getAttribute("data-isso-id") ||
+                      el.href.match("^(.+)#isso-thread$")[1]
                              .replace(/^.*\/\/[^\/]+/, '');
-            api.count(uri).then(function(rv) {
+
+            api.count(tid).then(function(rv) {
                 el.textContent = Mark.up("{{ i18n-num-comments | pluralize : `n` }}", {n: rv});
             });
         });
     };
 });
-define('text!app/../../css/isso.css',[],function () { return '* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\na {\n  text-decoration: none; }\n\n.isso-popup {\n  font-family: Helvetica, Arial, sans-serif;\n  font-size: 0.8em;\n  padding: 6px 8px;\n  margin-left: 20px;\n  border: 1px solid #f27a7a;\n  border-radius: 2px;\n  background-color: #f2dede;\n  z-index: 9002; }\n\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n  .isso-comment:after {\n    clear: both; }\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n    .isso-comment > div.text-wrapper > div.textarea-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      font: inherit; }\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n  .postbox:after {\n    clear: both; }\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n    .postbox > .form-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      min-height: 48px;\n      font: inherit; }\n      .postbox > .form-wrapper textarea::-webkit-input-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea::-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-ms-input-placeholder {\n        color: #AAA; }\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
+
+define('text!app/../../css/isso.css',[],function () { return '@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_grid\\.scss}line{font-family:\\000032}}\n* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000317}}\na {\n  text-decoration: none; }\n\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000321}}\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000325}}\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000332}}\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000336}}\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000318}}\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000323}}\n  .isso-comment:after {\n    clear: both; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000341}}\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000344}}\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000350}}\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000353}}\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000357}}\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000361}}\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000366}}\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000372}}\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000377}}\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000379}}\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000387}}\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000390}}\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\0000395}}\n    .isso-comment > div.text-wrapper > div.text h1, .isso-comment > div.text-wrapper > div.text h2, .isso-comment > div.text-wrapper > div.text h3, .isso-comment > div.text-wrapper > div.text h4, .isso-comment > div.text-wrapper > div.text h5, .isso-comment > div.text-wrapper > div.text h6 {\n      font-size: 100%; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003101}}\n    .isso-comment > div.text-wrapper > div.textarea-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      font: inherit; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003107}}\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003114}}\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003117}}\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003123}}\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003127}}\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003131}}\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003138}}\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003143}}\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000318}}\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000323}}\n  .postbox:after {\n    clear: both; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003146}}\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003149}}\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003155}}\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003158}}\n    .postbox > .form-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      min-height: 48px;\n      font: inherit; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\000038}}\n      .postbox > .form-wrapper textarea::-webkit-input-placeholder {\n        color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000314}}\n      .postbox > .form-wrapper textarea:-moz-placeholder {\n        color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000319}}\n      .postbox > .form-wrapper textarea::-moz-placeholder {\n        color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000324}}\n      .postbox > .form-wrapper textarea:-ms-input-placeholder {\n        color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003169}}\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003173}}\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000318}}\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/addons\\/_clearfix\\.scss}line{font-family:\\0000323}}\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003176}}\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003181}}\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\000038}}\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000314}}\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000319}}\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/bourbon\\/css3\\/_placeholder\\.scss}line{font-family:\\0000324}}\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003193}}\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/neat\\/grid\\/_span-columns\\.scss}line{font-family:\\0000333}}\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003197}}\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003207}}\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n@media -sass-debug-info{filename{font-family:file\\:\\/\\/\\/Users\\/ich\\/dev\\/isso\\/isso\\/css\\/isso\\.scss}line{font-family:\\00003211}}\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
 
 define('app/text/css',["text!../../../css/isso.css"], function(isso) {
     return {
@@ -4905,15 +5049,18 @@ define('app/text/css',["text!../../../css/isso.css"], function(isso) {
  * Distributed under the MIT license
  */
 
-require(["ready", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, api, isso, count, $, Mark, css) {
+require(["ready", "app/config", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, config, api, isso, count, $, Mark, css) {
 
     
 
     domready(function() {
-        var style = $.new("style");
-        style.type = "text/css";
-        style.textContent = css.inline;
-        $("head").append(style);
+
+        if (config["css"]) {
+            var style = $.new("style");
+            style.type = "text/css";
+            style.textContent = css.inline;
+            $("head").append(style);
+        }
 
         count();
 
@@ -4925,7 +5072,7 @@ require(["ready", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "
         $("#isso-thread").append(new isso.Postbox(null));
         $("#isso-thread").append('<div id="isso-root"></div>');
 
-        api.fetch().then(function(rv) {
+        api.fetch($("#isso-thread").getAttribute("data-isso-id")).then(function(rv) {
 
             if (! rv.length) {
                 $("#isso-thread > h4").textContent = Mark.up("{{ i18n-no-comments }}");

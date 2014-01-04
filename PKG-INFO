@@ -1,11 +1,11 @@
 Metadata-Version: 1.1
 Name: isso
-Version: 0.4
+Version: 0.6
 Summary: lightweight Disqus alternative
 Home-page: https://github.com/posativ/isso/
 Author: Martin Zimmermann
 Author-email: info@posativ.org
-License: BSD revised
+License: MIT
 Description: UNKNOWN
 Platform: UNKNOWN
 Classifier: Development Status :: 3 - Alpha

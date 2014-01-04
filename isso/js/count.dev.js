@@ -2513,40 +2513,32 @@ define('app/api',["q"], function(Q) {
      *      .. code-block:: html
      *
      *          <script data-isso="http://example.tld/path/" src="/.../embed.min.js"></script>
-     *
-     *   2. use require.js (during development). When using require.js, we
-     *      assume that the path to the scripts ends with `/js/`.
      */
 
     var script, endpoint,
         js = document.getElementsByTagName("script");
 
     for (var i = 0; i < js.length; i++) {
-        if (js[i].dataset.isso !== undefined) {
-            endpoint = js[i].dataset.isso;
-        } else if (js[i].src.match("require\\.js$")) {
-            endpoint = js[i].dataset.main.replace(/\/js\/(embed|count)$/, "");
+        if (js[i].hasAttribute("data-isso")) {
+            endpoint = js[i].getAttribute("data-isso");
+            break;
         }
     }
 
     if (! endpoint) {
         for (i = 0; i < js.length; i++) {
-            if (js[i].hasAttribute("async") || js[i].hasAttribute("defer")) {
+            if (js[i].getAttribute("async") || js[i].getAttribute("defer")) {
                 throw "Isso's automatic configuration detection failed, please " +
                       "refer to https://github.com/posativ/isso#client-configuration " +
-                      "and add a custom `data-isso-prefix` attribute.";
+                      "and add a custom `data-isso` attribute.";
             }
         }
 
         script = js[js.length - 1];
-
-        if (script.dataset.prefix) {
-            endpoint = script.dataset.prefix;
-        } else {
-            endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
-        }
+        endpoint = script.src.substring(0, script.src.length - "/js/embed.min.js".length);
     }
 
+    //  strip trailing slash
     if (endpoint[endpoint.length - 1] === "/") {
         endpoint = endpoint.substring(0, endpoint.length - 1);
     }
@@ -2574,7 +2566,9 @@ define('app/api',["q"], function(Q) {
 
         try {
             xhr.open(method, url, true);
-            xhr.withCredentials = true;  // fuck you, fuck you, fuck you IE
+            xhr.withCredentials = true;
+            xhr.setRequestHeader("Content-Type", "application/json");
+
             xhr.onreadystatechange = function () {
                 if (xhr.readyState === 4) {
                     onload();
@@ -2599,8 +2593,8 @@ define('app/api',["q"], function(Q) {
         return rv.substring(0, rv.length - 1);  // chop off trailing "&"
     };
 
-    var create = function(data) {
-        return curl("POST", endpoint + "/new?" + qs({uri: location}), JSON.stringify(data)).then(
+    var create = function(tid, data) {
+        return curl("POST", endpoint + "/new?" + qs({uri: tid || location}), JSON.stringify(data)).then(
             function (rv) { return JSON.parse(rv.body); });
     };
 
@@ -2625,9 +2619,9 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    var fetch = function(plain) {
+    var fetch = function(tid) {
 
-        return curl("GET", endpoint + "/?" + qs({uri: location, plain: plain}), null).then(function (rv) {
+        return curl("GET", endpoint + "/?" + qs({uri: tid || location}), null).then(function (rv) {
             if (rv.status === 200) {
                 return JSON.parse(rv.body);
             } else {
@@ -2636,8 +2630,8 @@ define('app/api',["q"], function(Q) {
         });
     };
 
-    var count = function(uri) {
-        return curl("GET", endpoint + "/count?" + qs({uri: uri}), null).then(function(rv) {
+    var count = function(tid) {
+        return curl("GET", endpoint + "/count?" + qs({uri: tid || location}), null).then(function(rv) {
             return JSON.parse(rv.body);
         });
     };
@@ -3318,6 +3312,33 @@ else if (typeof define === "function" && define.amd) {
     });
 }
 ;
+define('app/config',[],function() {
+    
+
+    var config = {
+        "css": true,
+        "lang": (navigator.language || navigator.userLanguage).split("-")[0],
+        "reply-to-self": false
+    };
+
+    var js = document.getElementsByTagName("script");
+
+    for (var i = 0; i < js.length; i++) {
+        [].forEach.call(js[i].attributes, function(attr) {
+            if (/^data-isso-/.test(attr.name)) {
+                try {
+                    config[attr.name.substring(10)] = JSON.parse(attr.value);
+                } catch (ex) {
+                    config[attr.name.substring(10)] = attr.value;
+                }
+            }
+        });
+    }
+
+    return config;
+
+});
+
 define('app/i18n/de',{
     "postbox-text" : "Kommentar hier eintippen (mindestens 3 Zeichen)",
     "postbox-author" : "Name (optional)",
@@ -3374,21 +3395,121 @@ define('app/i18n/en',{
     "date-month": "last month\n{{ n }} months ago",
     "date-year": "last year\n{{ n }} years ago"
 });
-define('app/i18n',["app/i18n/de", "app/i18n/en"], function(de, en) {
+define('app/i18n/fr',{
+    "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
+    "postbox-author": "Nom (optionel)",
+    "postbox-email": "Courriel (optionel)",
+    "postbox-submit": "Soumettre",
+
+    "num-comments": "Un commentaire\n{{ n }} commentaires",
+    "no-comments": "Aucun commentaire pour l'instant",
+
+    "comment-reply": "Répondre",
+    "comment-edit": "Éditer",
+    "comment-save": "Enregistrer",
+    "comment-delete": "Supprimer",
+    "comment-confirm": "Confirmer",
+    "comment-close": "Fermer",
+    "comment-cancel": "Annuler",
+    "comment-deleted": "Commentaire supprimé.",
+    "comment-queued": "Commentaire en attente de modération.",
+    "comment-anonymous": "Anonyme",
+
+    "date-now": "À l'instant'",
+    "date-minute": "Il y a une minute \n{{ n }} minutes",
+    "date-hour": "Il y a une heure\n{{ n }} heures ",
+    "date-day": "Hier\n{{ n }} jours auparavant",
+    "date-week": "Il y a une semaine\n{{ n }} semaines",
+    "date-month": "Il y a un mois\n{{ n }} mois",
+    "date-year": "Il y a un an\n{{ n }} ans"
+});
+
+define('app/i18n/ru',{
+    "postbox-text" : "Комментировать здесь  (миниум 3 символа)",
+    "postbox-author" : "Имя (необязательно)",
+    "postbox-email" : "Email (необязательно)",
+    "postbox-submit": "Отправить",
+
+    "num-comments": "1 Комментарий\n{{ n }} Комментарии",
+    "no-comments": "Нет Комментарев",
+
+    "comment-reply": "Ответить",
+    "comment-edit": "Правка",
+    "comment-save": "Сохранить",
+    "comment-delete": "Удалить",
+    "comment-confirm": "Подтвердить",
+    "comment-close": "Закрыть",
+    "comment-cancel": "Отменить",
+    "comment-deleted": "Удалить комментарий",
+    "comment-queued": "Комментарий должен быть разблокирован",
+    "comment-anonymous": "Аномимый",
+
+    "date-now": "Сейчас",
+    "date-minute": "Минут назад\n{{ n }} минут",
+    "date-hour": "Час назад\n{{ n }} часов",
+    "date-day": "Вчера\n{{ n }} дней",
+    "date-week": "на прошлой недели\n{{ n }} недель",
+    "date-month": "в прошоим месяце\n{{ n }} месяцов",
+    "date-year": "в прошлом году\n{{ n }} года\n{{ n }} лет"
+});
+
+define('app/i18n/it',{
+    "postbox-text": "Scrivi un commento qui (minimo 3 caratteri)",
+    "postbox-author": "Nome (opzionale)",
+    "postbox-email": "E-mail (opzionale)",
+    "postbox-submit": "Invia",
+
+    "num-comments": "Un Commento\n{{ n }} Commenti",
+    "no-comments": "Ancora Nessun Commento",
+
+    "comment-reply": "Rispondi",
+    "comment-edit": "Modifica",
+    "comment-save": "Salva",
+    "comment-delete": "Elimina",
+    "comment-confirm": "Conferma",
+    "comment-close": "Chiudi",
+    "comment-cancel": "Cancella",
+    "comment-deleted": "Commento eliminato.",
+    "comment-queued": "Commento in coda per moderazione.",
+    "comment-anonymous": "Anonimo",
+
+    "date-now": "poco fa",
+    "date-minute": "un minuto fa\n{{ n }} minuti fa",
+    "date-hour": "un ora fa\n{{ n }} ore fa",
+    "date-day": "Ieri\n{{ n }} giorni fa",
+    "date-week": "questa settimana\n{{ n }} settimane fa",
+    "date-month": "questo mese\n{{ n }} mesi fa",
+    "date-year": "quest'anno\n{{ n }} anni fa"
+});
+
+define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it"], function(config, de, en, fr, ru, it) {
 
     
 
     // pluralization functions for each language you support
     var plurals = {
-        "en": function (msgs, n) {
+        "en": function(msgs, n) {
             return msgs[n === 1 ? 0 : 1];
+        },
+        "fr": function(msgs, n) {
+            return msgs[n > 1 ? 0 : 1]
+        },
+        "ru": function(msg, n) {
+            if (n % 10 === 1 && n % 100 !== 11) {
+                return msg[0];
+            } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
+                return msg[1];
+            } else {
+                return msg[2] !== undefined ? msg[2] : msg[1];
+            }
         }
     };
 
     plurals["de"] = plurals["en"];
+    plurals["it"] = plurals["en"];
 
-    // the user's language. you can replace this with your own code
-    var lang = (navigator.language || navigator.userLanguage).split("-")[0];
+    // useragent's prefered language (or manually overridden)
+    var lang = config.lang;
 
     // fall back to English
     if (!plurals[lang]) {
@@ -3399,7 +3520,10 @@ define('app/i18n',["app/i18n/de", "app/i18n/en"], function(de, en) {
         plurals: plurals,
         lang: lang,
         de: de,
-        en: en
+        en: en,
+        fr: fr,
+        ru: ru,
+        it: it
     };
 });
 
@@ -3471,14 +3595,17 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                 return;
             }
 
-            var uri = el.href.match("^(.+)#isso-thread$")[1]
+            var tid = el.getAttribute("data-isso-id") ||
+                      el.href.match("^(.+)#isso-thread$")[1]
                              .replace(/^.*\/\/[^\/]+/, '');
-            api.count(uri).then(function(rv) {
+
+            api.count(tid).then(function(rv) {
                 el.textContent = Mark.up("{{ i18n-num-comments | pluralize : `n` }}", {n: rv});
             });
         });
     };
 });
+
 require(["ready", "app/count"], function(domready, count) {
     domready(function() {
         count();
