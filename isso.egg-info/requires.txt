@@ -1,6 +1,6 @@
 itsdangerous
 misaka
 html5lib
-ipaddress
+ipaddr>=2.1
 configparser
 werkzeug>=0.8

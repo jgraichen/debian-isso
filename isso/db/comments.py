@@ -2,7 +2,6 @@
 
 import time
 
-from isso.db import spam
 from isso.utils import Bloomfilter
 from isso.compat import buffer
 
@@ -33,7 +32,6 @@ class Comments:
             '    text VARCHAR, author VARCHAR, email VARCHAR, website VARCHAR,',
             '    likes INTEGER DEFAULT 0, dislikes INTEGER DEFAULT 0, voters BLOB NOT NULL);'])
 
-    @spam.check
     def add(self, uri, c):
         """
         Add a new comment to the database and return public fields as dict.

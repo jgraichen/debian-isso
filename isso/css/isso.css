@@ -6,16 +6,6 @@
 a {
   text-decoration: none; }
 
-.isso-popup {
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 0.8em;
-  padding: 6px 8px;
-  margin-left: 20px;
-  border: 1px solid #f27a7a;
-  border-radius: 2px;
-  background-color: #f2dede;
-  z-index: 9002; }
-
 #isso-thread {
   padding: 0;
   margin: 0; }
@@ -80,6 +70,8 @@ a {
       margin-top: 0.2em; }
       .isso-comment > div.text-wrapper > div.text p:last-child {
         margin-bottom: 0.2em; }
+    .isso-comment > div.text-wrapper > div.text h1, .isso-comment > div.text-wrapper > div.text h2, .isso-comment > div.text-wrapper > div.text h3, .isso-comment > div.text-wrapper > div.text h4, .isso-comment > div.text-wrapper > div.text h5, .isso-comment > div.text-wrapper > div.text h6 {
+      font-size: 100%; }
     .isso-comment > div.text-wrapper > div.textarea-wrapper textarea {
       width: 100%;
       border: 1px solid #f0f0f0;
