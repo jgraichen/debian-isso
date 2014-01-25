@@ -16,10 +16,12 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=isso                  # Introduce a short description here
 NAME=isso                  # Introduce the short server's name here
 USER=isso
-DAEMON=/usr/bin/isso       # Introduce the server's location here
-DAEMON_ARGS="-c /etc/isso.conf run" # Arguments to run the daemon with
-PIDFILE=/var/run/$NAME.pid
+GROUP=nogroup
+PIDFILE=/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
+
+DAEMON=/usr/bin/gunicorn       # Introduce the server's location here
+DAEMON_ARGS="--bind unix:/run/isso.sock --user $USER --group $GROUP --preload --env ISSO_SETTINGS=/etc/isso.conf isso.run" # Arguments to run the daemon with
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0

@@ -18,7 +18,7 @@ Description: lightweight Disqus alternative
 
 Package: isso
 Architecture: all
-Depends: isso-common (= ${binary:Version}), lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends}
+Depends: isso-common (= ${binary:Version}), gunicorn, lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends}
 Recommends: ${python:Recommends}
 Description: lightweight Disqus alternative
  .

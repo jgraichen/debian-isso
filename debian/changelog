@@ -1,8 +1,9 @@
-isso (0.6.1-1) UNRELEASED; urgency=low
+isso (0.6.1-2) UNRELEASED; urgency=low
 
   * Import upstream version 0.6.1
+  * Use gunicorn as serverx
 
- -- Jan Graichen <jg@altimos.de>  Thu, 16 Jan 2014 14:32:15 +0100
+ -- Jan Graichen <jg@altimos.de>  Sat, 25 Jan 2014 14:19:59 +0100
 
 isso (0.6-1) wheezy; urgency=low
 
