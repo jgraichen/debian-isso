@@ -5,6 +5,15 @@
 
 case $1 in
     configure)
+
+        # Add isso user
+        if ! id isso > /dev/null 2>&1 ; then
+            adduser --system --home "/var/lib/isso" --no-create-home \
+                --ingroup nogroup --disabled-password --shell /bin/sh \
+                --gecos 'isso' \
+                isso
+        fi
+
         # For systemd, enable the isso unit, but don't start it
 	    if [ -x /bin/systemctl ]; then
 	      systemctl enable isso.service >/dev/null 2>&1 || true
