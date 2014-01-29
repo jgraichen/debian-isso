@@ -30,16 +30,15 @@ from __future__ import print_function
 import pkg_resources
 dist = pkg_resources.get_distribution("isso")
 
-try:
-    import uwsgi
-except ImportError:
-    uwsgi = None
+# check if exectuable is `isso` and gevent is available
+import sys
+
+if sys.argv[0].startswith("isso"):
     try:
         import gevent.monkey; gevent.monkey.patch_all()
     except ImportError:
-        gevent = None
+        pass
 
-import sys
 import os
 import errno
 import logging
@@ -140,20 +139,26 @@ class Isso(object):
         return self.wsgi_app(environ, start_response)
 
 
-def make_app(conf=None):
+def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
+
+    if threading:
+        class App(Isso, ThreadedMixin):
+            pass
+
+    if multiprocessing:
+        class App(Isso, ProcessMixin):
+            pass
 
     if uwsgi:
         class App(Isso, uWSGIMixin):
             pass
-    elif gevent or sys.argv[0].endswith("isso"):
-        class App(Isso, ThreadedMixin):
-            pass
-    else:
-        class App(Isso, ProcessMixin):
-            pass
 
     isso = App(conf)
 
+    # show session-key (to see that it changes randomely if unset)
+    logger.info("session-key = %s", isso.conf.get("general", "session-key"))
+
+    # check HTTP server connection
     for host in conf.getiter("general", "host"):
         with http.curl('HEAD', host, '/', 5) as resp:
             if resp is not None:

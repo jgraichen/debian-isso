@@ -106,7 +106,7 @@ class Config:
     default = [
         "[general]",
         "name = ",
-        "dbpath = /tmp/isso.db", "session-key = %r" % binascii.b2a_hex(os.urandom(24)),
+        "dbpath = /tmp/isso.db", "session-key = %s" % binascii.b2a_hex(os.urandom(16)),
         "host = http://localhost:8080/", "max-age = 15m",
         "notify = ",
         "[moderation]",
@@ -117,7 +117,7 @@ class Config:
         "reload = off", "profile = off",
         "[smtp]",
         "username = ", "password = ",
-        "host = localhost", "port = 465", "ssl = on",
+        "host = localhost", "port = 587", "security = starttls",
         "to = ", "from = ",
         "[guard]",
         "enabled = true",
@@ -148,6 +148,8 @@ class Config:
                 logger.warn("no such option: [%s] %s", *item)
                 if item in (("server", "host"), ("server", "port")):
                     logger.warn("use `listen = http://$host:$port` instead")
+                if item == ("smtp", "ssl"):
+                    logger.warn("use `security = none | starttls | ssl` instead")
 
         if rv.get("smtp", "username") and not rv.get("general", "notify"):
             logger.warn(("SMTP is no longer enabled by default, add "
