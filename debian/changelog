@@ -1,8 +1,14 @@
-isso (0.7-3) UNRELEASED; urgency=low
+isso (0.7-4) wheezy; urgency=low
+
+  * Fix sysv init script to stop gunicorn daemon.
+
+ -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:49:51 +0100
+
+isso (0.7-3) wheezy; urgency=low
 
   * Fix sysv init script to not run gunicorn as isso user.
 
- -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:26:34 +0100
+ -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:49:23 +0100
 
 isso (0.7-2) wheezy; urgency=low
 
