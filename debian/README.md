@@ -14,7 +14,7 @@ You should then have the resulting package in parent directory.
 
 ## Long build
 
-Requires setup [sbuild](https://wiki.debian.org/sbuild).
+Requires [sbuild](https://wiki.debian.org/sbuild).
 
 First build source package:
 
@@ -27,6 +27,20 @@ Then build package in minimal chrooted build environment:
 ```
     $ sbuild -A ../isso_<version>.dsc
 ```
+
+Or just run `sbuild` source directory:
+
+```
+    $ sbuild -A -s .
+```
+
+Or build different architecture or distribution (create sbuild schroots first):
+
+```
+    $ sbuild --arch=i386 --dist=precise -A --append-to-version=~precise0 isso*dsc
+```
+
+See `man sbuild` for available options.
 
 ## Maintainer
 
