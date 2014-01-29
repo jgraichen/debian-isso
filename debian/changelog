@@ -1,3 +1,9 @@
+isso (0.7-5) wheezy; urgency=low
+
+  * Enable gunicorn logging to log file.
+
+ -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 20:20:03 +0100
+
 isso (0.7-4) wheezy; urgency=low
 
   * Fix sysv init script to stop gunicorn daemon.
