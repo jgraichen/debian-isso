@@ -1,10 +1,16 @@
-isso (0.7-2) UNRELEASED; urgency=low
+isso (0.7-3) UNRELEASED; urgency=low
+
+  * Fix sysv init script to not run gunicorn as isso user.
+
+ -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:26:34 +0100
+
+isso (0.7-2) wheezy; urgency=low
 
   * Import upstream version 0.7
   * Use gunicorn as server
   * Replace/Conflict isso-common
 
- -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:14:05 +0100
+ -- Jan Graichen <jg@altimos.de>  Wed, 29 Jan 2014 16:26:27 +0100
 
 isso (0.6-1) wheezy; urgency=low
 

@@ -49,14 +49,12 @@ do_start()
 	#   2 if daemon could not be started
 	start-stop-daemon --start --quiet \
 		--pidfile $PIDFILE \
-		--chuid $USER \
 		--exec $DAEMON \
 		--test > /dev/null \
 		|| return 1
 	start-stop-daemon --start --quiet \
 	    --make-pidfile \
 		--pidfile $PIDFILE \
-		--chuid $USER \
 		--background \
 		--exec $DAEMON -- $DAEMON_ARGS \
 		|| return 2
