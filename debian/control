@@ -12,6 +12,8 @@ Vcs-Git: git://github.com/jgraichen/debian-isso.git
 Package: isso
 Architecture: all
 Depends: gunicorn, lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends}
+Conflicts: isso-common
+Replaces: isso-common
 Recommends: ${python:Recommends}
 Description: lightweight Disqus alternative
  .
