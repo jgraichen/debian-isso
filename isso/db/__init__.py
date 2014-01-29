@@ -11,6 +11,11 @@ from isso.db.spam import Guard
 
 
 class SQLite3:
+    """DB-dependend wrapper around SQLite3.
+
+    Runs migration if `user_version` is older than `MAX_VERSION` and register
+    a trigger for automated orphan removal.
+    """
 
     MAX_VERSION = 1
 
@@ -18,7 +23,6 @@ class SQLite3:
 
         self.path = path
         self.conf = conf
-        self.mode = 1
 
         rv = self.execute([
             "SELECT name FROM sqlite_master"
@@ -60,6 +64,8 @@ class SQLite3:
 
         logger.info("migrate database from version %i to %i", self.version, to)
 
+        # re-initialize voters blob due a bug in the bloomfilter signature
+        # which added older commenter's ip addresses to the current voters blob
         if self.version == 0:
 
             from isso.utils import Bloomfilter
