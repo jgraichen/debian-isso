@@ -15,21 +15,28 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC=isso                  # Introduce a short description here
 NAME=isso                  # Introduce the short server's name here
-USER=isso
-GROUP=nogroup
 PIDFILE=/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 
 DAEMON=/usr/bin/gunicorn       # Introduce the server's location here
-DAEMON_ARGS="--bind unix:/run/isso.sock --log-file /var/log/isso.log --user $USER --group $GROUP --preload isso.run" # Arguments to run the daemon with
+
+# default daemon args, could be overrided in /etc/default/isso
+DEFAULT_RUN_USER=isso
+DEFAULT_RUN_GROUP=nogroup
+DEFAULT_LOG_FILE=/var/log/isso.log
+DEFAULT_BIND=127.0.0.1:8095
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+# Arguments to run the daemon with
+
+DAEMON_ARGS="--bind ${BIND:-$DEFAULT_BIND} --log-file ${LOG_FILE:-$DEFAULT_LOG_FILE} --user ${RUN_USER:-$DEFAULT_RUN_USER} --group ${RUN_GROUP:-$DEFAULT_RUN_GROUP} --preload isso.run"
 
 export ISSO_SETTINGS="/etc/isso.conf"
 
 # Exit if the package is not installed
 [ -x $DAEMON ] || exit 0
-
-# Read configuration variable file if it is present
-[ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh

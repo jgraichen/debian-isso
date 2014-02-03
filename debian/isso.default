@@ -1,0 +1,12 @@
+# Configuration file for isso
+
+# Overrides init script vars
+# default values are commented
+
+#RUN_USER=isso
+#RUN_GROUP=nogroup
+#LOG_FILE=/var/log/isso.log
+#BIND=127.0.0.1:8095
+
+# You can bind on a unix socket with
+#BIND=unix:/run/isso.sock
