@@ -1,3 +1,10 @@
+isso (0.7.2) UNRELEASED; urgency=low
+
+  * Add config examples
+  * Change default config to use TCP socket
+
+ -- Jan Graichen <jg@altimos.de>  Tue, 04 Feb 2014 00:05:01 +0100
+
 isso (0.7.1) wheezy; urgency=low
 
   * Imported Upstream version 0.7.1
