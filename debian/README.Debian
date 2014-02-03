@@ -1,0 +1,28 @@
+Since 0.7, the package is conigured in a way that the application is served
+through the gunicorn WSGI server.
+Gunicorn listens to a unix socket on port 8095 by default.
+You can override that or switch to unix socket by setting DAEMON_ARGS in
+/etc/default/isso (see /etc/init.d/isso)
+
+Sample configurations for apache2/nginx/lighttpd are provided in
+/usr/share/doc/isso*/examples
+
+
+Special notes for Apache
+------------------------
+
+You should enable proxy and proxy_http modules
+
+a2enmod proxy proxy_http
+
+
+Special notes for Lighttpd
+--------------------------
+
+You should enable proxy module
+
+lighty-enable-mod proxy
+
+
+
+
