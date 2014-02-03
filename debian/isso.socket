@@ -2,7 +2,7 @@
 Description=isso socket
 
 [Socket]
-ListenStream=/run/isso.sock
+ListenStream=127.0.0.1:8095
 
 [Install]
 WantedBy=sockets.target
