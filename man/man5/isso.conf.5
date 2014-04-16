@@ -1,0 +1,364 @@
+.\" Man page generated from reStructuredText.
+.
+.TH "ISSO.CONF" "5" "April 09, 2014" "0.8" "Isso"
+.SH NAME
+isso.conf \- server configuration
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.sp
+The Isso configuration file is an \fI\%INI\-style\fP textfile. It reads integers,
+booleans, strings and lists. Here\(aqs the default isso configuration:
+\fBisso.conf\fP\&. A basic configuration from
+scratch looks like this:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[general]
+dbpath = /var/lib/isso/comments.db
+host = https://example.tld/
+[server]
+listen = http://localhost:1234/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+To use your configuration file with Isso, append \fB\-c /path/to/cfg\fP to the
+executable or run Isso with an environment variable:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+~> isso \-c path/to/isso.cfg
+~> env ISSO_SETTINGS=path/to/isso.cfg isso
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Sections covered in this document:
+.INDENT 0.0
+.IP \(bu 2
+\fI\%General\fP
+.IP \(bu 2
+\fI\%Moderation\fP
+.IP \(bu 2
+\fI\%Server\fP
+.IP \(bu 2
+\fI\%SMTP\fP
+.IP \(bu 2
+\fI\%Guard\fP
+.IP \(bu 2
+\fI\%Markup\fP
+.IP \(bu 2
+\fI\%Appendum\fP
+.UNINDENT
+.SH GENERAL
+.sp
+In this section, you configure most comment\-related options such as database path,
+session key and hostname. Here are the default values for this section:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[general]
+dbpath = /tmp/isso.db
+name =
+host =
+max\-age = 15m
+notify =
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B dbpath
+file location to the SQLite3 database, highly recommended to change this
+location to a non\-temporary location!
+.TP
+.B name
+required to dispatch \fImultiple websites\fP,
+not used otherwise.
+.TP
+.B host
+Your website(s). If Isso is unable to connect to at least on site, you\(aqll
+get a warning during startup and comments are most likely non\-functional.
+.sp
+You\(aqll need at least one host/website to run Isso. This is due to security
+reasons: Isso uses \fI\%CORS\fP to embed comments and to restrict comments only to
+your website, you have to "whitelist" your website(s).
+.sp
+I recommend the first value to be a non\-SSL website that is used as fallback
+if Firefox users (and only those) supress their HTTP referer completely.
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[general]
+host =
+    http://example.tld/
+    https://example.tld/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.TP
+.B max\-age
+time range that allows users to edit/remove their own comments. See
+\fI\%Appendum: Timedelta\fP for valid values.
+.TP
+.B notify
+Select notification backend for new comments. Currently, only SMTP
+is available.
+.UNINDENT
+.SH MODERATION
+.sp
+Enable moderation queue and handling of comments still in moderation queue
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[moderation]
+enabled = false
+purge\-after = 30d
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B enabled
+enable comment moderation queue. This option only affects new comments.
+Comments in modertion queue are not visible to other users until you
+activate them.
+.TP
+.B purge\-after
+remove unprocessed comments in moderation queue after given time.
+.UNINDENT
+.SH SERVER
+.sp
+HTTP server configuration.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[server]
+listen = http://localhost:8080
+reload = off
+profile = off
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B listen
+interface to listen on. Isso supports TCP/IP and unix domain sockets:
+.INDENT 7.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+; UNIX domain socket
+listen = unix:///tmp/isso.sock
+; TCP/IP
+listen = http:///localhost:1234/
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+When \fBgevent\fP is available, it is automatically used for \fIhttp://\fP
+Currently, gevent can not handle http requests on unix domain socket
+(see \fI\%#295\fP and
+\fI\%#299\fP for details).
+.sp
+Does not apply for \fIuWSGI\fP\&.
+.TP
+.B reload
+reload application, when the source code has changed. Useful for
+development. Only works with the internal webserver.
+.TP
+.B profile
+show 10 most time consuming function in Isso after each request. Do
+not use in production.
+.UNINDENT
+.SH SMTP
+.sp
+Isso can notify you on new comments via SMTP. In the email notification, you
+also can moderate (=activate or delete) comments. Don\(aqt forget to configure
+\fBnotify = smtp\fP in the general section.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[smtp]
+username =
+password =
+host = localhost
+port = 587
+security = starttls
+to =
+from =
+timeout = 10
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B username
+self\-explanatory, optional
+.TP
+.B password
+self\-explanatory (yes, plain text, create a dedicated account for
+notifications), optional.
+.TP
+.B host
+SMTP server
+.TP
+.B port
+SMTP port
+.TP
+.B security
+use a secure connection to the server, possible values: \fInone\fP, \fIstarttls\fP
+or \fIssl\fP\&. Note, that Python does not validate the server\(aqs certificate and
+thus the connection is vulnerable to Man\-in\-the\-Middle attacks. Therefore,
+you should definitely use a dedicated SMTP account for Isso.
+.TP
+.B to
+recipient address, e.g. your email address
+.TP
+.B from
+sender address, e.g. \fI\%isso@example.tld\fP
+.TP
+.B timeout
+specify a timeout in seconds for blocking operations like the
+connection attempt.
+.UNINDENT
+.SH GUARD
+.sp
+Enable basic spam protection features, e.g. rate\-limit per IP address (\fB/24\fP
+for IPv4, \fB/48\fP for IPv6).
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[guard]
+enabled = true
+ratelimit = 2
+direct\-reply = 3
+reply\-to\-self = false
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B enabled
+enable guard, recommended in production. Not useful for debugging
+purposes.
+.TP
+.B ratelimit
+limit to N new comments per minute.
+.TP
+.B direct\-reply
+how many comments directly to the thread (prevent a simple
+\fIwhile true; do curl ...; done\fP\&.
+.TP
+.B reply\-to\-self
+allow commenters to reply to their own comments when they could still edit
+the comment. After the editing timeframe is gone, commenters can reply to
+their own comments anyways.
+.sp
+Do not forget to configure the client.
+.UNINDENT
+.SH MARKUP
+.sp
+Customize markup and sanitized HTML. Currently, only Markdown (via Misaka) is
+supported, but new languages are relatively easy to add.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+[markup]
+options = strikethrough, superscript, autolink
+allowed\-elements =
+allowed\-attributes =
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.INDENT 0.0
+.TP
+.B options
+\fI\%Misaka\-specific Markdown extensions\fP, all
+flags starting with \fIEXT_\fP can be used there, separated by comma.
+.TP
+.B allowed\-elements
+Additional HTML tags to allow in the generated output, comma\-separated. By
+default, only \fIa\fP, \fIblockquote\fP, \fIbr\fP, \fIcode\fP, \fIdel\fP, \fIem\fP, \fIh1\fP, \fIh2\fP,
+\fIh3\fP, \fIh4\fP, \fIh5\fP, \fIh6\fP, \fIhr\fP, \fIins\fP, \fIli\fP, \fIol\fP, \fIp\fP, \fIpre\fP, \fIstrong\fP,
+\fItable\fP, \fItbody\fP, \fItd\fP, \fIth\fP, \fIthead\fP and \fIul\fP are allowed.
+.TP
+.B allowed\-attributes
+Additional HTML attributes (independent from elements) to allow in the
+generated output, comma\-separated. By default, only \fIalign\fP and \fIhref\fP are
+allowed.
+.UNINDENT
+.sp
+To allow images in comments, you just need to add \fBallowed\-elements = img\fP and
+\fBallowed\-attributes = src\fP\&.
+.SH APPENDUM
+.INDENT 0.0
+.TP
+.B Timedelta
+A human\-friendly representation of a time range: \fI1m\fP equals to 60
+seconds. This works for years (y), weeks (w), days (d) and seconds (s),
+e.g. \fI30s\fP equals 30 to seconds.
+.sp
+You can add different types: \fI1m30s\fP equals to 90 seconds, \fI3h45m12s\fP
+equals to 3 hours, 45 minutes and 12 seconds (12512 seconds).
+.UNINDENT
+.SH AUTHOR
+Martin Zimmermann
+.SH COPYRIGHT
+2013, Martin Zimmermann
+.\" Generated by docutils manpage writer.
+.

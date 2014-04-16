@@ -16,7 +16,7 @@ from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 from isso.compat import text_type as str
 
 from isso import utils, local
-from isso.utils import http, parse, html, JSONResponse as JSON
+from isso.utils import http, parse, JSONResponse as JSON
 from isso.utils.crypto import pbkdf2
 from isso.views import requires
 
@@ -61,6 +61,7 @@ class API(object):
         ('fetch',   ('GET', '/')),
         ('new',     ('POST', '/new')),
         ('count',   ('GET', '/count')),
+        ('counts',  ('POST', '/count')),
         ('view',    ('GET', '/id/<int:id>')),
         ('edit',    ('PUT', '/id/<int:id>')),
         ('delete',  ('DELETE', '/id/<int:id>')),
@@ -163,7 +164,7 @@ class API(object):
             value=self.isso.sign([rv["id"], sha1(rv["text"])]),
             max_age=self.conf.getint('max-age'))
 
-        rv["text"] = html.markdown(rv["text"])
+        rv["text"] = self.isso.render(rv["text"])
         rv["hash"] = pbkdf2(rv['email'] or rv['remote_addr'], self.isso.salt, 1000, 6).decode("utf-8")
 
         self.cache.set('hash', (rv['email'] or rv['remote_addr']).encode('utf-8'), rv['hash'])
@@ -189,7 +190,7 @@ class API(object):
             rv.pop(key)
 
         if request.args.get('plain', '0') == '0':
-            rv['text'] = html.markdown(rv['text'])
+            rv['text'] = self.isso.render(rv['text'])
 
         return JSON(rv, 200)
 
@@ -230,7 +231,7 @@ class API(object):
                 value=self.isso.sign([rv["id"], sha1(rv["text"])]),
                 max_age=self.conf.getint('max-age'))
 
-        rv["text"] = html.markdown(rv["text"])
+        rv["text"] = self.isso.render(rv["text"])
 
         resp = JSON(rv, 200)
         resp.headers.add("Set-Cookie", cookie(str(rv["id"])))
@@ -336,7 +337,7 @@ class API(object):
 
         if request.args.get('plain', '0') == '0':
             for item in rv:
-                item['text'] = html.markdown(item['text'])
+                item['text'] = self.isso.render(item['text'])
 
         return JSON(rv, 200)
 
@@ -352,6 +353,7 @@ class API(object):
         nv = self.comments.vote(False, id, utils.anonymize(str(request.remote_addr)))
         return JSON(nv, 200)
 
+    # TODO: remove someday (replaced by :func:`counts`)
     @requires(str, 'uri')
     def count(self, environ, request, uri):
 
@@ -361,6 +363,15 @@ class API(object):
             raise NotFound
 
         return JSON(rv, 200)
+
+    def counts(self, environ, request):
+
+        data = request.get_json()
+
+        if not isinstance(data, list) and not all(isinstance(x, str) for x in data):
+            raise BadRequest("JSON must be a list of URLs")
+
+        return JSON(self.comments.count(*data), 200)
 
     def checkip(self, env, req):
         return Response(utils.anonymize(str(req.remote_addr)), 200)

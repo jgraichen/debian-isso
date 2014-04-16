@@ -423,143 +423,44 @@ var requirejs, require, define;
 
 define("components/almond/almond", function(){});
 
-/**
- * @license RequireJS domReady 2.0.1 Copyright (c) 2010-2012, The Dojo Foundation All Rights Reserved.
- * Available via the MIT or new BSD license.
- * see: http://github.com/requirejs/domReady for details
- */
-/*jslint */
-/*global require: false, define: false, requirejs: false,
-  window: false, clearInterval: false, document: false,
-  self: false, setInterval: false */
+define('app/lib/ready',[],function() {
 
-
-define('ready',[],function () {
     
 
-    var isTop, testDiv, scrollIntervalId,
-        isBrowser = typeof window !== "undefined" && window.document,
-        isPageLoaded = !isBrowser,
-        doc = isBrowser ? document : null,
-        readyCalls = [];
-
-    function runCallbacks(callbacks) {
-        var i;
-        for (i = 0; i < callbacks.length; i += 1) {
-            callbacks[i](doc);
-        }
-    }
-
-    function callReady() {
-        var callbacks = readyCalls;
-
-        if (isPageLoaded) {
-            //Call the DOM ready callbacks
-            if (callbacks.length) {
-                readyCalls = [];
-                runCallbacks(callbacks);
-            }
-        }
-    }
-
-    /**
-     * Sets the page as loaded.
-     */
-    function pageLoaded() {
-        if (!isPageLoaded) {
-            isPageLoaded = true;
-            if (scrollIntervalId) {
-                clearInterval(scrollIntervalId);
-            }
-
-            callReady();
-        }
-    }
-
-    if (isBrowser) {
-        if (document.addEventListener) {
-            //Standards. Hooray! Assumption here that if standards based,
-            //it knows about DOMContentLoaded.
-            document.addEventListener("DOMContentLoaded", pageLoaded, false);
-            window.addEventListener("load", pageLoaded, false);
-        } else if (window.attachEvent) {
-            window.attachEvent("onload", pageLoaded);
-
-            testDiv = document.createElement('div');
-            try {
-                isTop = window.frameElement === null;
-            } catch (e) {}
-
-            //DOMContentLoaded approximation that uses a doScroll, as found by
-            //Diego Perini: http://javascript.nwbox.com/IEContentLoaded/,
-            //but modified by other contributors, including jdalton
-            if (testDiv.doScroll && isTop && window.external) {
-                scrollIntervalId = setInterval(function () {
-                    try {
-                        testDiv.doScroll();
-                        pageLoaded();
-                    } catch (e) {}
-                }, 30);
-            }
-        }
-
-        //Check if document already complete, and if so, just trigger page load
-        //listeners. Latest webkit browsers also use "interactive", and
-        //will fire the onDOMContentLoaded before "interactive" but not after
-        //entering "interactive" or "complete". More details:
-        //http://dev.w3.org/html5/spec/the-end.html#the-end
-        //http://stackoverflow.com/questions/3665561/document-readystate-of-interactive-vs-ondomcontentloaded
-        //Hmm, this is more complicated on further use, see "firing too early"
-        //bug: https://github.com/requirejs/domReady/issues/1
-        //so removing the || document.readyState === "interactive" test.
-        //There is still a window.onload binding that should get fired if
-        //DOMContentLoaded is missed.
-        if (document.readyState === "complete") {
-            pageLoaded();
-        }
-    }
-
-    /** START OF PUBLIC API **/
-
-    /**
-     * Registers a callback for DOM ready. If DOM is already ready, the
-     * callback is called immediately.
-     * @param {Function} callback
-     */
-    function domReady(callback) {
-        if (isPageLoaded) {
-            callback(doc);
-        } else {
-            readyCalls.push(callback);
-        }
-        return domReady;
-    }
-
-    domReady.version = '2.0.1';
-
-    /**
-     * Loader Plugin API method
-     */
-    domReady.load = function (name, req, onLoad, config) {
-        if (config.isBuild) {
-            onLoad(null);
-        } else {
-            domReady(onLoad);
+    var loaded = false;
+    var once = function(callback) {
+        if (! loaded) {
+            loaded = true;
+            callback();
         }
     };
 
-    /** END OF PUBLIC API **/
+    var domready = function(callback) {
 
-    return domReady;
+        // HTML5 standard to listen for dom readiness
+        document.addEventListener('DOMContentLoaded', function() {
+            once(callback);
+        });
+
+        // if dom is already ready, just run callback
+        if (document.readyState === "interactive" || document.readyState === "complete" ) {
+            once(callback);
+        }
+    };
+
+    return domready;
+
 });
-
 define('app/config',[],function() {
     
 
     var config = {
         "css": true,
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
-        "reply-to-self": false
+        "reply-to-self": false,
+        "avatar-bg": "#f0f0f0",
+        "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
+                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" ")
     };
 
     var js = document.getElementsByTagName("script");
@@ -575,6 +476,9 @@ define('app/config',[],function() {
             }
         });
     }
+
+    // split avatar-fg on whitespace
+    config["avatar-fg"] = config["avatar-fg"].split(" ");
 
     return config;
 
@@ -638,7 +542,28 @@ define('app/lib/promise',[],function() {
 
 });
 
-define('app/api',["app/lib/promise"], function(Q) {
+define('app/globals',[],function() {
+    
+
+    var Offset = function() {
+        this.values = [];
+    };
+
+    Offset.prototype.update = function(remoteTime) {
+        this.values.push((new Date()).getTime() - remoteTime.getTime());
+    };
+
+    Offset.prototype.localTime = function() {
+        return new Date((new Date()).getTime() + this.values.reduce(
+            function(a, b) { return a + b; }) / this.values.length);
+    };
+
+    return {
+        offset: new Offset()
+    };
+
+});
+define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
     
 
@@ -681,8 +606,12 @@ define('app/api',["app/lib/promise"], function(Q) {
 
         function onload() {
 
-            var cookie = xhr.getResponseHeader("X-Set-Cookie");
+            var date = xhr.getResponseHeader("Date");
+            if (date !== null) {
+                globals.offset.update(new Date(date));
+            }
 
+            var cookie = xhr.getResponseHeader("X-Set-Cookie");
             if (cookie && cookie.match(/^isso-/)) {
                 document.cookie = cookie;
             }
@@ -778,13 +707,11 @@ define('app/api',["app/lib/promise"], function(Q) {
         return deferred.promise;
     };
 
-    var count = function(tid) {
+    var count = function(urls) {
         var deferred = Q.defer();
-        curl("GET", endpoint + "/count?" + qs({uri: tid || location}), null, function(rv) {
+        curl("POST", endpoint + "/count", JSON.stringify(urls), function(rv) {
             if (rv.status === 200) {
                 deferred.resolve(JSON.parse(rv.body));
-            } else if (rv.status === 404) {
-                deferred.resolve(0);
             } else {
                 deferred.reject(rv.body);
             }
@@ -1221,7 +1148,7 @@ define('text',['module'], function (module) {
     return text;
 });
 
-define('text!app/text/postbox.html',[],function () { return '<div class="postbox">\n    <div class="avatar">\n        <svg class="blank" data-hash="{{ hash }}"></svg>\n    </div>\n    <div class="form-wrapper">\n        <div class="textarea-wrapper">\n            <textarea name="text" rows="2" placeholder="{{ i18n-postbox-text }}"></textarea>\n        </div>\n        <section class="auth-section">\n            <p class="input-wrapper">\n                <input type="text" name="author" placeholder="{{ i18n-postbox-author }}"/>\n            </p>\n            <p class="input-wrapper">\n                <input type="email" name="email" placeholder="{{ i18n-postbox-email }}"/>\n            </p>\n            <p class="post-action">\n                <input type="submit" value="{{ i18n-postbox-submit }}"/>\n            </p>\n        </section>\n    </div>\n</div>';});
+define('text!app/text/postbox.html',[],function () { return '<div class="postbox">\n    <div class="avatar">\n        <svg class="blank" data-hash="{{ hash }}"></svg>\n    </div>\n    <div class="form-wrapper">\n        <div class="textarea-wrapper">\n            <div class="textarea placeholder" contenteditable="true">{{ i18n-postbox-text }}</div>\n        </div>\n        <section class="auth-section">\n            <p class="input-wrapper">\n                <input type="text" name="author" placeholder="{{ i18n-postbox-author }}"/>\n            </p>\n            <p class="input-wrapper">\n                <input type="email" name="email" placeholder="{{ i18n-postbox-email }}"/>\n            </p>\n            <p class="post-action">\n                <input type="submit" value="{{ i18n-postbox-submit }}"/>\n            </p>\n        </section>\n    </div>\n</div>';});
 
 define('text!app/text/comment.html',[],function () { return '<div class="isso-comment" id="isso-{{ id | blank }}">\n    <div class="avatar">\n        <svg data-hash="{{ hash }}"></svg>\n    </div>\n    <div class="text-wrapper">\n        <div class="isso-comment-header" role="meta">\n            {{ if bool(website) }}\n            <a class="author" href="{{ website }}" rel="nofollow">\n                {{ author | blank : `i18n-comment-anonymous` }}\n            </a>\n            {{ else }}\n                <span class="author">\n                    {{ author | blank : `i18n-comment-anonymous` }}\n                </span>\n            {{ /if }}\n\n            {{ if parent }}\n            <span class="spacer">•</span>\n            <a class="parent" href="#isso-{{ parent }}">\n                <i>{{ svg-forward }}</i>{{ replyto | blank: `i18n-comment-anonymous` }}\n            </a>\n            {{ /if }}\n\n            <span class="spacer">•</span>\n\n            <a class="permalink" href="#isso-{{ id }}">\n                <date datetime="{{ created | datetime }}"></date>\n            </a>\n\n            <span class="note">\n            {{ if mode | equals : 2 }}\n                {{ i18n-comment-queued }}\n            {{ /if }}\n            {{ if mode | equals : 4 }}\n                {{ i18n-comment-deleted }}\n            {{ /if }}\n            </span>\n\n        </div>\n        <div class="text">\n            {{ if mode | equals : 4 }}\n                <p>&nbsp;</p>\n            {{ else }}\n                {{ text }}\n            {{ /if }}\n        </div>\n        <div class="isso-comment-footer">\n            {{ if likes | substract : `dislikes` | notequals : 0 }}\n                <span class="votes">{{ likes | substract : `dislikes` }}</span>\n            {{ /if }}\n            <a class="upvote" href="#"><i>{{ svg-arrow-up}}</i></a>\n            <span class="spacer">|</span>\n            <a class="downvote" href="#"><i>{{ svg-arrow-down}}</i></a>\n\n            <a class="reply" href="#">{{ i18n-comment-reply }}</a>\n            <a class="edit" href="#">{{ i18n-comment-edit }}</a>\n            <a class="delete" href="#">{{ i18n-comment-delete }}</a>\n        </div>\n        <div class="isso-follow-up">\n        </div>\n    </div>\n</div>';});
 
@@ -1266,7 +1193,7 @@ define('app/dom',[],function() {
         by default, set :param prevents: to `false` to change that behavior.
          */
         this.addEventListener(type, function(event) {
-            listener();
+            listener(event);
             if (prevent === undefined || prevent) {
                 event.preventDefault();
             }
@@ -2124,20 +2051,23 @@ define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark
     };
 });
 define('app/utils',["app/markup"], function(Mark) {
+    
 
     // return `cookie` string if set
     var cookie = function(cookie) {
         return (document.cookie.match('(^|; )' + cookie + '=([^;]*)') || 0)[2];
     };
 
-    var ago = function(date) {
+    var ago = function(localTime, date) {
 
-        var diff = (((new Date()).getTime() - date.getTime()) / 1000),
-            day_diff = Math.floor(diff / 86400);
+        var secs = ((localTime.getTime() - date.getTime()) / 1000);
 
-        if (isNaN(day_diff) || day_diff < 0) {
-            return;
+        if (isNaN(secs) || secs < 0 ) {
+            secs = 0;
         }
+
+        var mins = Math.ceil(secs / 60), hours = Math.ceil(mins / 60),
+            days = Math.ceil(hours / 24);
 
         var i18n = function(msgid, n) {
             if (! n) {
@@ -2147,50 +2077,73 @@ define('app/utils',["app/markup"], function(Mark) {
             }
         };
 
-        return day_diff === 0 && (
-                diff <    60 && i18n("date-now")  ||
-                diff <  3600 && i18n("date-minute", Math.floor(diff / 60)) ||
-                diff < 86400 && i18n("date-hour", Math.floor(diff / 3600))) ||
-            day_diff <   7 && i18n("date-day", day_diff) ||
-            day_diff <  31 && i18n("date-week", Math.ceil(day_diff / 7)) ||
-            day_diff < 365 && i18n("date-month", Math.ceil(day_diff / 30)) ||
-            i18n("date-year", Math.ceil(day_diff / 365.25));
+        return secs  <=  45 && i18n("date-now")  ||
+               secs  <=  90 && i18n("date-minute", 1) ||
+               mins  <=  45 && i18n("date-minute", mins) ||
+               mins  <=  90 && i18n("date-hour", 1) ||
+               hours <=  22 && i18n("date-hour", hours) ||
+               hours <=  36 && i18n("date-day", 1) ||
+               days  <=   5 && i18n("date-day", days) ||
+               days  <=   8 && i18n("date-week", 1) ||
+               days  <=  21 && i18n("date-week", Math.ceil(days / 7)) ||
+               days  <=  45 && i18n("date-month", 1) ||
+               days  <= 345 && i18n("date-month", Math.ceil(days / 30)) ||
+               days  <= 547 && i18n("date-year", 1) ||
+                               i18n("date-year", Math.ceil(days / 365.25));
+    };
+
+    var text = function(html) {
+        var _ = document.createElement("div");
+        _.innerHTML = html.replace(/<div><br><\/div>/gi, '<br>')
+                          .replace(/<div>/gi,'<br>')
+                          .replace(/<br>/gi, '\n');
+        return _.textContent.trim();
+    };
+
+    var detext = function(text) {
+        return text.replace(/\n\n/gi, '<br><div><br></div>')
+                   .replace(/\n/gi, '<br>');
     };
 
     return {
         cookie: cookie,
-        ago: ago
+        ago: ago,
+        text: text,
+        detext: detext
     };
 });
 
-define('app/lib/fancy',[],function() {
-
+define('app/lib/editor',["app/dom", "app/markup"], function($, Mark) {
     
 
-    var autoresize = function(textarea, minheight) {
-        var offset= !window.opera ? (textarea.offsetHeight - textarea.clientHeight) : (textarea.offsetHeight + parseInt(window.getComputedStyle(textarea, null).getPropertyValue('border-top-width')));
-        ["keyup", "focus"].forEach(function(event) {
-            textarea.on(event, function() {
-                if ((textarea.scrollHeight  + offset ) > minheight) {
-                    textarea.style.height = "auto";
-                    textarea.style.height = (textarea.scrollHeight  + offset ) + 'px';
-                }
-            });
+    return function(el) {
+        el.setAttribute("contentEditable", true);
+
+        el.on("focus", function() {
+            if (el.classList.contains("placeholder")) {
+                el.innerHTML = "";
+                el.classList.remove("placeholder");
+            }
         });
+
+        el.on("blur", function() {
+            if (el.textContent.length === 0) {
+                el.textContent = Mark.up("{{ i18n-postbox-text }}");
+                el.classList.add("placeholder");
+            }
+        });
+
+        return el;
     };
 
-    return {
-        autoresize: autoresize
-    };
 });
-
 /*
   Copyright (C) 2013 Gregory Schier <gschier1990@gmail.com>
   Copyright (C) 2013 Martin Zimmermann <info@posativ.org>
 
   Inspired by http://codepen.io/gschier/pen/GLvAy
 */
-define('app/lib/identicons',["app/lib/promise"], function(Q) {
+define('app/lib/identicons',["app/lib/promise", "app/config"], function(Q, config) {
 
     
 
@@ -2226,7 +2179,7 @@ define('app/lib/identicons',["app/lib/promise"], function(Q) {
         svg.setAttribute("viewBox", "0 0 " + size + " " + size);
         svg.setAttribute("preserveAspectRatio", "xMinYMin meet");
         svg.setAttribute("shape-rendering", "crispEdges");
-        fill(svg, 0, 0, 0, size + 2*padding, "#F0F0F0");
+        fill(svg, 0, 0, 0, size + 2*padding, config["avatar-bg"]);
 
         if (typeof key === null) {
             return svg;
@@ -2234,46 +2187,20 @@ define('app/lib/identicons',["app/lib/promise"], function(Q) {
 
         Q.when(key, function(key) {
             var hash = pad((parseInt(key, 16) % Math.pow(2, 18)).toString(2), 18),
-                index = 0, color = null;
+                index = 0;
 
             svg.setAttribute("data-hash", key);
 
-            // via http://colrd.com/palette/19308/
-            switch (hash.substring(hash.length - 3, hash.length)) {
-            case "000":
-                color = "#9abf88";
-                break;
-            case "001":
-                color = "#5698c4";
-                break;
-            case "010":
-                color = "#e279a3";
-                break;
-            case "011":
-                color = "#9163b6";
-                break;
-            case "100":
-                color = "#be5168";
-                break;
-            case "101":
-                color = "#f19670";
-                break;
-            case "110":
-                color = "#e4bf80";
-                break;
-            case "111":
-                color = "#447c69";
-                break;
-            }
+            var i = parseInt(hash.substring(hash.length - 3, hash.length), 2),
+                color = config["avatar-fg"][i % config["avatar-fg"].length];
 
-            // FILL THE SQUARES
             for (var x=0; x<Math.ceil(GRID/2); x++) {
                 for (var y=0; y<GRID; y++) {
 
                     if (hash.charAt(index) === "1") {
                         fill(svg, x, y, padding, 8, color);
 
-                        // FILL RIGHT SIDE SYMMETRICALLY
+                        // fill right sight symmetrically
                         if (x < Math.floor(GRID/2)) {
                             fill(svg, (GRID-1) - x, y, padding, 8, color);
                         }
@@ -2846,9 +2773,9 @@ define('app/lib/pbkdf2',["app/lib/promise", "app/lib/sha1"], function(Q, sha1) {
     }
 })
 ;
-define('app/lib',['require','app/lib/fancy','app/lib/identicons','app/lib/pbkdf2','app/lib/sha1'],function (require) {
+define('app/lib',['require','app/lib/editor','app/lib/identicons','app/lib/pbkdf2','app/lib/sha1'],function (require) {
     return {
-        fancy: require("app/lib/fancy"),
+        editorify: require("app/lib/editor"),
         identicons: require("app/lib/identicons"),
         pbkdf2: require("app/lib/pbkdf2"),
         sha1: require("app/lib/sha1")
@@ -2857,8 +2784,8 @@ define('app/lib',['require','app/lib/fancy','app/lib/identicons','app/lib/pbkdf2
 
 /* Isso – Ich schrei sonst!
  */
-define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/api", "app/markup", "app/i18n", "app/lib"],
-    function(templates, $, utils, config, api, Mark, i18n, lib) {
+define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/api", "app/markup", "app/i18n", "app/lib", "app/globals"],
+    function(templates, $, utils, config, api, Mark, i18n, lib, globals) {
 
     
 
@@ -2872,7 +2799,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         $(".avatar > svg", el).replace(lib.identicons.blank(4, 48));
 
         // on text area focus, generate identicon from IP address
-        $(".textarea-wrapper > textarea", el).on("focus", function() {
+        $(".textarea-wrapper > .textarea", el).on("focus", function() {
             if ($(".avatar svg", el).getAttribute("className") === "blank") {
                 $(".avatar svg", el).replace(
                     lib.identicons.generate(lib.pbkdf2(api.remote_addr(), api.salt, 1000, 6), 4, 48));
@@ -2902,8 +2829,10 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         el.onsuccess = function() {};
 
         el.validate = function() {
-            if ($("textarea", this).value.length < 3) {
-                $("textarea", this).focus();
+            if (utils.text($(".textarea", this).innerHTML).length < 3 ||
+                $(".textarea", this).classList.contains("placeholder"))
+            {
+                $(".textarea", this).focus();
                 return false;
             }
             return true;
@@ -2919,14 +2848,13 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
             api.create($("#isso-thread").getAttribute("data-isso-id"), {
                 author: $("[name=author]", el).value || null,
                 email: $("[name=email]", el).value || null,
-                text: $("textarea", el).value,
+                text: utils.text($(".textarea", el).innerHTML),
                 parent: parent || null
             }).then(function(comment) {
                 $("[name=author]", el).value = "";
                 $("[name=email]", el).value = "";
-                $("textarea", el).value = "";
-                $("textarea", el).rows = 2;
-                $("textarea", el).blur();
+                $(".textarea", el).innerHTML = "";
+                $(".textarea", el).blur();
                 insert(comment, true);
 
                 if (parent !== null) {
@@ -2936,8 +2864,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
             });
         });
 
-        // copy'n'paste sluggy automagically dynamic textarea resize
-        lib.fancy.autoresize($("textarea", el), 48);
+        lib.editorify($(".textarea", el));
 
         return el;
     };
@@ -2957,7 +2884,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         // update datetime every 60 seconds
         var refresh = function() {
             $(".permalink > date", el).textContent = utils.ago(
-                new Date(parseInt(comment.created, 10) * 1000));
+                globals.offset.localTime(), new Date(parseInt(comment.created, 10) * 1000));
             setTimeout(refresh, 60*1000);
         };
 
@@ -2993,7 +2920,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
             function(toggler) {
                 form = footer.insertAfter(new Postbox(comment.id));
                 form.onsuccess = function() { toggler.next(); };
-                $("textarea", form).focus();
+                $(".textarea", form).focus();
                 $("a.reply", footer).textContent = msgs["comment-close"];
             },
             function() {
@@ -3014,7 +2941,7 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         // update vote counter, but hide if votes sum to 0
         var votes = function(value) {
             var span = $("span.votes", footer);
-            if (span === null && value === 0) {
+            if (span === null && value !== 0) {
                 footer.prepend($.new("span.votes", value));
             } else {
                 if (value === 0) {
@@ -3043,34 +2970,44 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
 
                 edit.textContent = msgs["comment-save"];
                 edit.insertAfter($.new("a.cancel", msgs["comment-cancel"])).on("click", function() {
-                    text.textContent = "";
-                    text.className = "text";
-                    text.append(comment.text);
+                    toggler.canceled = true;
                     toggler.next();
                 });
 
+                toggler.canceled = false;
                 api.view(comment.id, 1).then(function(rv) {
-                    var textarea = $.new("textarea", rv.text);
-                    lib.fancy.autoresize(textarea, 48);
-                    text.className = "textarea-wrapper";
+                    var textarea = lib.editorify($.new("div.textarea"));
+
+                    textarea.innerHTML = utils.detext(rv.text);
+                    textarea.focus();
+
+                    text.classList.remove("text");
+                    text.classList.add("textarea-wrapper");
+
                     text.textContent = "";
                     text.append(textarea);
-                    textarea.focus();
                 });
             },
             function(toggler) {
-                var textarea = $("textarea", text);
-                if (textarea && textarea.value.length < 3) {
-                    textarea.focus();
-                    toggler.wait();
-                    return;
-                } else if (textarea) {
-                    api.modify(comment.id, {"text": textarea.value}).then(function(rv) {
-                        text.innerHTML = rv.text;
-                        text.className = "text";
-                        comment.text = rv.text;
-                    });
+                var textarea = $(".textarea", text);
+
+                if (! toggler.canceled && textarea !== null) {
+                    if (utils.text(textarea.innerHTML).length < 3) {
+                        textarea.focus();
+                        toggler.wait();
+                        return;
+                    } else {
+                        api.modify(comment.id, {"text": utils.text(textarea.innerHTML)}).then(function(rv) {
+                            text.innerHTML = rv.text;
+                            comment.text = rv.text;
+                        });
+                    }
+                } else {
+                    text.innerHTML = comment.text;
                 }
+
+                text.classList.remove("textarea-wrapper");
+                text.classList.add("text");
 
                 $("a.cancel", footer).remove();
                 $("a.edit", footer).textContent = msgs["comment-edit"];
@@ -3097,8 +3034,8 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                     } else {
                         $("span.note", header).textContent = msgs["comment-deleted"];
                         text.innerHTML = "<p>&nbsp;</p>";
-                        $("a.edit", footer).remove()
-                        $("a.delete", footer).remove()
+                        $("a.edit", footer).remove();
+                        $("a.delete", footer).remove();
                     }
                     del.textContent = msgs["comment-delete"];
                 });
@@ -3141,6 +3078,9 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
 
 define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) {
     return function() {
+
+        var objs = {};
+
         $.each("a", function(el) {
             if (! el.href.match("#isso-thread$")) {
                 return;
@@ -3150,14 +3090,33 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                       el.href.match("^(.+)#isso-thread$")[1]
                              .replace(/^.*\/\/[^\/]+/, '');
 
-            api.count(tid).then(function(rv) {
-                el.textContent = Mark.up("{{ i18n-num-comments | pluralize : `n` }}", {n: rv});
-            });
+            if (tid in objs) {
+                objs[tid].push(el);
+            } else {
+                objs[tid] = [el];
+            }
+        });
+
+        var urls = Object.keys(objs);
+
+        api.count(urls).then(function(rv) {
+            for (var key in objs) {
+                if (objs.hasOwnProperty(key)) {
+
+                    var index = urls.indexOf(key);
+
+                    for (var i = 0; i < objs[key].length; i++) {
+                        objs[key][i].textContent = Mark.up(
+                            "{{ i18n-num-comments | pluralize : `n` }}",
+                            {n: rv[index]});
+                    }
+                }
+            }
         });
     };
 });
 
-define('text!app/../../css/isso.css',[],function () { return '* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\na {\n  text-decoration: none; }\n\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n  .isso-comment:after {\n    clear: both; }\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n    .isso-comment > div.text-wrapper > div.text h1, .isso-comment > div.text-wrapper > div.text h2, .isso-comment > div.text-wrapper > div.text h3, .isso-comment > div.text-wrapper > div.text h4, .isso-comment > div.text-wrapper > div.text h5, .isso-comment > div.text-wrapper > div.text h6 {\n      font-size: 100%; }\n    .isso-comment > div.text-wrapper > div.textarea-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      font: inherit; }\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n  .postbox:after {\n    clear: both; }\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n    .postbox > .form-wrapper textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      min-height: 48px;\n      font: inherit; }\n      .postbox > .form-wrapper textarea::-webkit-input-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea::-moz-placeholder {\n        color: #AAA; }\n      .postbox > .form-wrapper textarea:-ms-input-placeholder {\n        color: #AAA; }\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
+define('text!app/../../css/isso.css',[],function () { return '* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\na {\n  text-decoration: none; }\n\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n  #isso-thread .textarea {\n    min-height: 48px;\n    outline: 0px solid transparent; }\n  #isso-thread .textarea.placeholder {\n    color: #AAA; }\n\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n  .isso-comment:after {\n    clear: both; }\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n    .isso-comment > div.text-wrapper > .textarea-wrapper .textarea {\n      margin-top: 0.2em; }\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n    .isso-comment > div.text-wrapper > div.text h1, .isso-comment > div.text-wrapper > div.text h2, .isso-comment > div.text-wrapper > div.text h3, .isso-comment > div.text-wrapper > div.text h4, .isso-comment > div.text-wrapper > div.text h5, .isso-comment > div.text-wrapper > div.text h6 {\n      font-size: 100%; }\n    .isso-comment > div.text-wrapper > div.textarea-wrapper .textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888; }\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n  .postbox:after {\n    clear: both; }\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n    .postbox > .form-wrapper .textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888; }\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
 
 define('app/text/css',["text!../../../css/isso.css"], function(isso) {
     return {
@@ -3170,7 +3129,7 @@ define('app/text/css',["text!../../../css/isso.css"], function(isso) {
  * Distributed under the MIT license
  */
 
-require(["ready", "app/config", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, config, api, isso, count, $, Mark, css) {
+require(["app/lib/ready", "app/config", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, config, api, isso, count, $, Mark, css) {
 
     
 

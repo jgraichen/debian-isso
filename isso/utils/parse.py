@@ -1,20 +1,20 @@
 
 from __future__ import print_function
 
-import re
 import datetime
-
 from itertools import chain
+
+import re
+
 
 try:
     from urllib import unquote
-    from urlparse import urlparse
 except ImportError:
-    from urllib.parse import urlparse, unquote
+    from urllib.parse import unquote
 
 import html5lib
 
-from isso.compat import map, filter, PY2K, string_types, text_type as str
+from isso.compat import map, filter, PY2K
 
 if PY2K:  # http://bugs.python.org/issue12984
     from xml.dom.minidom import NamedNodeMap
@@ -51,76 +51,11 @@ def timedelta(value):
     return datetime.timedelta(**kwargs)
 
 
-def host(name):
-    """
-    Parse :param name: into `httplib`-compatible host:port.
-
-    >>> host("http://example.tld/")
-    ('example.tld', 80, False)
-    >>> host("https://example.tld/")
-    ('example.tld', 443, True)
-    >>> host("example.tld")
-    ('example.tld', 80, False)
-    >>> host("example.tld:42")
-    ('example.tld', 42, False)
-    >>> host("https://example.tld:80/")
-    ('example.tld', 80, True)
-    """
-
-    if not (isinstance(name, string_types)):
-        name = str(name)
-
-    if not name.startswith(('http://', 'https://')):
-        name = 'http://' + name
-
-    rv = urlparse(name)
-    if rv.scheme == 'https' and rv.port is None:
-        return (rv.netloc, 443, True)
-    return (rv.netloc.rsplit(':')[0], rv.port or 80, rv.scheme == 'https')
-
 
 def thread(data, default=u"Untitled.", id=None):
     """
     Extract <h1> title from web page. The title is *probably* the text node,
     which is the nearest H1 node in context to an element with the `isso-thread` id.
-
-    >>> thread("asdf")  # doctest: +IGNORE_UNICODE
-    (None, 'Untitled.')
-    >>> thread('''
-    ... <html>
-    ... <head>
-    ...     <title>Foo!</title>
-    ... </head>
-    ... <body>
-    ...     <header>
-    ...         <h1>generic website title.</h1>
-    ...         <h2>subtile title.</h2>
-    ...     </header>
-    ...     <article>
-    ...         <header>
-    ...             <h1>Can you find me?</h1>
-    ...         </header>
-    ...         <section id="isso-thread">
-    ...         </section>
-    ...     </article>
-    ... </body>
-    ... </html>''')  # doctest: +IGNORE_UNICODE
-    (None, 'Can you find me?')
-    >>> thread('''
-    ... <html>
-    ... <body>
-    ... <h1>I'm the real title!1
-    ... <section data-title="No way%21" id="isso-thread">
-    ... ''')  # doctest: +IGNORE_UNICODE
-    (None, 'No way!')
-    >>> thread('''
-    ... <section id="isso-thread" data-title="Test" data-isso-id="test">
-    ... ''')  # doctest: +IGNORE_UNICODE
-    ('test', 'Test')
-    >>> thread('''
-    ... <section id="isso-thread" data-isso-id="Fuu.">
-    ... ''')  # doctest: +IGNORE_UNICODE
-    ('Fuu.', 'Untitled.')
     """
 
     html = html5lib.parse(data, treebuilder="dom")

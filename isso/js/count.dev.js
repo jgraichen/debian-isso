@@ -423,136 +423,34 @@ var requirejs, require, define;
 
 define("components/almond/almond", function(){});
 
-/**
- * @license RequireJS domReady 2.0.1 Copyright (c) 2010-2012, The Dojo Foundation All Rights Reserved.
- * Available via the MIT or new BSD license.
- * see: http://github.com/requirejs/domReady for details
- */
-/*jslint */
-/*global require: false, define: false, requirejs: false,
-  window: false, clearInterval: false, document: false,
-  self: false, setInterval: false */
+define('app/lib/ready',[],function() {
 
-
-define('ready',[],function () {
     
 
-    var isTop, testDiv, scrollIntervalId,
-        isBrowser = typeof window !== "undefined" && window.document,
-        isPageLoaded = !isBrowser,
-        doc = isBrowser ? document : null,
-        readyCalls = [];
-
-    function runCallbacks(callbacks) {
-        var i;
-        for (i = 0; i < callbacks.length; i += 1) {
-            callbacks[i](doc);
-        }
-    }
-
-    function callReady() {
-        var callbacks = readyCalls;
-
-        if (isPageLoaded) {
-            //Call the DOM ready callbacks
-            if (callbacks.length) {
-                readyCalls = [];
-                runCallbacks(callbacks);
-            }
-        }
-    }
-
-    /**
-     * Sets the page as loaded.
-     */
-    function pageLoaded() {
-        if (!isPageLoaded) {
-            isPageLoaded = true;
-            if (scrollIntervalId) {
-                clearInterval(scrollIntervalId);
-            }
-
-            callReady();
-        }
-    }
-
-    if (isBrowser) {
-        if (document.addEventListener) {
-            //Standards. Hooray! Assumption here that if standards based,
-            //it knows about DOMContentLoaded.
-            document.addEventListener("DOMContentLoaded", pageLoaded, false);
-            window.addEventListener("load", pageLoaded, false);
-        } else if (window.attachEvent) {
-            window.attachEvent("onload", pageLoaded);
-
-            testDiv = document.createElement('div');
-            try {
-                isTop = window.frameElement === null;
-            } catch (e) {}
-
-            //DOMContentLoaded approximation that uses a doScroll, as found by
-            //Diego Perini: http://javascript.nwbox.com/IEContentLoaded/,
-            //but modified by other contributors, including jdalton
-            if (testDiv.doScroll && isTop && window.external) {
-                scrollIntervalId = setInterval(function () {
-                    try {
-                        testDiv.doScroll();
-                        pageLoaded();
-                    } catch (e) {}
-                }, 30);
-            }
-        }
-
-        //Check if document already complete, and if so, just trigger page load
-        //listeners. Latest webkit browsers also use "interactive", and
-        //will fire the onDOMContentLoaded before "interactive" but not after
-        //entering "interactive" or "complete". More details:
-        //http://dev.w3.org/html5/spec/the-end.html#the-end
-        //http://stackoverflow.com/questions/3665561/document-readystate-of-interactive-vs-ondomcontentloaded
-        //Hmm, this is more complicated on further use, see "firing too early"
-        //bug: https://github.com/requirejs/domReady/issues/1
-        //so removing the || document.readyState === "interactive" test.
-        //There is still a window.onload binding that should get fired if
-        //DOMContentLoaded is missed.
-        if (document.readyState === "complete") {
-            pageLoaded();
-        }
-    }
-
-    /** START OF PUBLIC API **/
-
-    /**
-     * Registers a callback for DOM ready. If DOM is already ready, the
-     * callback is called immediately.
-     * @param {Function} callback
-     */
-    function domReady(callback) {
-        if (isPageLoaded) {
-            callback(doc);
-        } else {
-            readyCalls.push(callback);
-        }
-        return domReady;
-    }
-
-    domReady.version = '2.0.1';
-
-    /**
-     * Loader Plugin API method
-     */
-    domReady.load = function (name, req, onLoad, config) {
-        if (config.isBuild) {
-            onLoad(null);
-        } else {
-            domReady(onLoad);
+    var loaded = false;
+    var once = function(callback) {
+        if (! loaded) {
+            loaded = true;
+            callback();
         }
     };
 
-    /** END OF PUBLIC API **/
+    var domready = function(callback) {
 
-    return domReady;
+        // HTML5 standard to listen for dom readiness
+        document.addEventListener('DOMContentLoaded', function() {
+            once(callback);
+        });
+
+        // if dom is already ready, just run callback
+        if (document.readyState === "interactive" || document.readyState === "complete" ) {
+            once(callback);
+        }
+    };
+
+    return domready;
+
 });
-
 define('app/lib/promise',[],function() {
 
     
@@ -611,7 +509,28 @@ define('app/lib/promise',[],function() {
 
 });
 
-define('app/api',["app/lib/promise"], function(Q) {
+define('app/globals',[],function() {
+    
+
+    var Offset = function() {
+        this.values = [];
+    };
+
+    Offset.prototype.update = function(remoteTime) {
+        this.values.push((new Date()).getTime() - remoteTime.getTime());
+    };
+
+    Offset.prototype.localTime = function() {
+        return new Date((new Date()).getTime() + this.values.reduce(
+            function(a, b) { return a + b; }) / this.values.length);
+    };
+
+    return {
+        offset: new Offset()
+    };
+
+});
+define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
     
 
@@ -654,8 +573,12 @@ define('app/api',["app/lib/promise"], function(Q) {
 
         function onload() {
 
-            var cookie = xhr.getResponseHeader("X-Set-Cookie");
+            var date = xhr.getResponseHeader("Date");
+            if (date !== null) {
+                globals.offset.update(new Date(date));
+            }
 
+            var cookie = xhr.getResponseHeader("X-Set-Cookie");
             if (cookie && cookie.match(/^isso-/)) {
                 document.cookie = cookie;
             }
@@ -751,13 +674,11 @@ define('app/api',["app/lib/promise"], function(Q) {
         return deferred.promise;
     };
 
-    var count = function(tid) {
+    var count = function(urls) {
         var deferred = Q.defer();
-        curl("GET", endpoint + "/count?" + qs({uri: tid || location}), null, function(rv) {
+        curl("POST", endpoint + "/count", JSON.stringify(urls), function(rv) {
             if (rv.status === 200) {
                 deferred.resolve(JSON.parse(rv.body));
-            } else if (rv.status === 404) {
-                deferred.resolve(0);
             } else {
                 deferred.reject(rv.body);
             }
@@ -841,7 +762,7 @@ define('app/dom',[],function() {
         by default, set :param prevents: to `false` to change that behavior.
          */
         this.addEventListener(type, function(event) {
-            listener();
+            listener(event);
             if (prevent === undefined || prevent) {
                 event.preventDefault();
             }
@@ -1454,7 +1375,10 @@ define('app/config',[],function() {
     var config = {
         "css": true,
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
-        "reply-to-self": false
+        "reply-to-self": false,
+        "avatar-bg": "#f0f0f0",
+        "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
+                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" ")
     };
 
     var js = document.getElementsByTagName("script");
@@ -1470,6 +1394,9 @@ define('app/config',[],function() {
             }
         });
     }
+
+    // split avatar-fg on whitespace
+    config["avatar-fg"] = config["avatar-fg"].split(" ");
 
     return config;
 
@@ -1716,6 +1643,9 @@ define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark
 });
 define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) {
     return function() {
+
+        var objs = {};
+
         $.each("a", function(el) {
             if (! el.href.match("#isso-thread$")) {
                 return;
@@ -1725,14 +1655,33 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                       el.href.match("^(.+)#isso-thread$")[1]
                              .replace(/^.*\/\/[^\/]+/, '');
 
-            api.count(tid).then(function(rv) {
-                el.textContent = Mark.up("{{ i18n-num-comments | pluralize : `n` }}", {n: rv});
-            });
+            if (tid in objs) {
+                objs[tid].push(el);
+            } else {
+                objs[tid] = [el];
+            }
+        });
+
+        var urls = Object.keys(objs);
+
+        api.count(urls).then(function(rv) {
+            for (var key in objs) {
+                if (objs.hasOwnProperty(key)) {
+
+                    var index = urls.indexOf(key);
+
+                    for (var i = 0; i < objs[key].length; i++) {
+                        objs[key][i].textContent = Mark.up(
+                            "{{ i18n-num-comments | pluralize : `n` }}",
+                            {n: rv[index]});
+                    }
+                }
+            }
         });
     };
 });
 
-require(["ready", "app/count"], function(domready, count) {
+require(["app/lib/ready", "app/count"], function(domready, count) {
     domready(function() {
         count();
     })

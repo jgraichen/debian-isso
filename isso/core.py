@@ -3,10 +3,8 @@
 from __future__ import print_function
 
 import io
-import os
 import time
 import logging
-import binascii
 import threading
 import multiprocessing
 
@@ -44,6 +42,9 @@ class Section:
     def getint(self, key):
         return self.conf.getint(self.section, key)
 
+    def getlist(self, key):
+        return self.conf.getlist(self.section, key)
+
     def getiter(self, key):
         return self.conf.getiter(self.section, key)
 
@@ -56,25 +57,6 @@ class IssoParser(ConfigParser):
     Extended :class:`ConfigParser` to parse human-readable timedeltas
     into seconds and handles multiple values per key.
 
-    >>> import io
-    >>> parser = IssoParser(allow_no_value=True)
-    >>> parser.read_file(io.StringIO(u'''
-    ... [foo]
-    ... bar = 1h
-    ... baz = 12
-    ... bla =
-    ...     spam
-    ...     ham
-    ... asd = fgh
-    ... '''))
-    >>> parser.getint("foo", "bar")
-    3600
-    >>> parser.getint("foo", "baz")
-    12
-    >>> list(parser.getiter("foo", "bla"))  # doctest: +IGNORE_UNICODE
-    ['spam', 'ham']
-    >>> list(parser.getiter("foo", "asd"))  # doctest: +IGNORE_UNICODE
-    ['fgh']
     """
 
     @classmethod
@@ -92,6 +74,9 @@ class IssoParser(ConfigParser):
             except AttributeError:
                 return int(IssoParser._total_seconds(delta))
 
+    def getlist(self, section, key):
+        return list(map(str.strip, self.get(section, key).split(',')))
+
     def getiter(self, section, key):
         for item in map(str.strip, self.get(section, key).split('\n')):
             if item:
@@ -106,8 +91,9 @@ class Config:
     default = [
         "[general]",
         "name = ",
-        "dbpath = /tmp/isso.db", "session-key = %s" % binascii.b2a_hex(os.urandom(16)),
-        "host = http://localhost:8080/", "max-age = 15m",
+        "dbpath = /tmp/isso.db",
+        "host = ",
+        "max-age = 15m",
         "notify = ",
         "[moderation]",
         "enabled = false",
@@ -119,11 +105,16 @@ class Config:
         "username = ", "password = ",
         "host = localhost", "port = 587", "security = starttls",
         "to = ", "from = ",
+        "timeout = 10",
         "[guard]",
         "enabled = true",
         "ratelimit = 2",
         "direct-reply = 3",
-        "reply-to-self = false"
+        "reply-to-self = false",
+        "[markup]",
+        "options = strikethrough, autolink",
+        "allowed-elements = ",
+        "allowed-attributes = "
     ]
 
     @classmethod
@@ -150,11 +141,9 @@ class Config:
                     logger.warn("use `listen = http://$host:$port` instead")
                 if item == ("smtp", "ssl"):
                     logger.warn("use `security = none | starttls | ssl` instead")
-
-        if rv.get("smtp", "username") and not rv.get("general", "notify"):
-            logger.warn(("SMTP is no longer enabled by default, add "
-                         "`notify = smtp` to the general section to "
-                         "enable SMTP nofications."))
+                if item == ("general", "session-key"):
+                    logger.info("Your `session-key` has been stored in the "
+                                "database itself, this option is now unused")
 
         return rv
 
