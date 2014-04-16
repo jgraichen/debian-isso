@@ -64,7 +64,8 @@ local_manager = LocalManager([local])
 
 from isso import db, migrate, wsgi, ext, views
 from isso.core import ThreadedMixin, ProcessMixin, uWSGIMixin, Config
-from isso.utils import parse, http, JSONRequest, origin
+from isso.wsgi import origin, urlsplit
+from isso.utils import http, JSONRequest, html
 from isso.views import comments
 
 from isso.ext.notifications import Stdout, SMTP
@@ -85,7 +86,8 @@ class Isso(object):
 
         self.conf = conf
         self.db = db.SQLite3(conf.get('general', 'dbpath'), conf)
-        self.signer = URLSafeTimedSerializer(conf.get('general', 'session-key'))
+        self.signer = URLSafeTimedSerializer(self.db.preferences.get("session-key"))
+        self.markup = html.Markup(conf.section('markup'))
 
         super(Isso, self).__init__(conf)
 
@@ -101,6 +103,9 @@ class Isso(object):
 
         views.Info(self)
         comments.API(self)
+
+    def render(self, text):
+        return self.markup.render(text)
 
     def sign(self, obj):
         return self.signer.dumps(obj)
@@ -141,22 +146,20 @@ class Isso(object):
 
 def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
 
+    if not any((threading, multiprocessing, uwsgi)):
+        raise RuntimeError("either set threading, multiprocessing or uwsgi")
+
     if threading:
         class App(Isso, ThreadedMixin):
             pass
-
-    if multiprocessing:
+    elif multiprocessing:
         class App(Isso, ProcessMixin):
             pass
-
-    if uwsgi:
+    else:
         class App(Isso, uWSGIMixin):
             pass
 
     isso = App(conf)
-
-    # show session-key (to see that it changes randomely if unset)
-    logger.info("session-key = %s", isso.conf.get("general", "session-key"))
 
     # check HTTP server connection
     for host in conf.getiter("general", "host"):
@@ -165,20 +168,24 @@ def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
                 logger.info("connected to %s", host)
                 break
     else:
-        logger.warn("unable to connect to %s", ", ".join(conf.getiter("general", "host")))
+        logger.warn("unable to connect to your website, Isso will probably not "
+                    "work correctly. Please make sure, Isso can reach your "
+                    "website via HTTP(S).")
 
     wrapper = [local_manager.make_middleware]
 
     if isso.conf.getboolean("server", "profile"):
         wrapper.append(partial(ProfilerMiddleware,
-            sort_by=("cumtime", ), restrictions=("isso/(?!lib)", 10)))
+            sort_by=("cumulative", ), restrictions=("isso/(?!lib)", 10)))
 
     wrapper.append(partial(SharedDataMiddleware, exports={
         '/js': join(dirname(__file__), 'js/'),
         '/css': join(dirname(__file__), 'css/')}))
 
     wrapper.append(partial(wsgi.CORSMiddleware,
-        origin=origin(isso.conf.getiter("general", "host"))))
+        origin=origin(isso.conf.getiter("general", "host")),
+        allowed=("Origin", "Referer", "Content-Type"),
+        exposed=("X-Set-Cookie", "Date")))
 
     wrapper.extend([wsgi.SubURI, ProxyFix])
 
@@ -212,8 +219,12 @@ def main():
         migrate.disqus(db.SQLite3(dbpath, conf), args.dump)
         sys.exit(0)
 
+    if not any(conf.getiter("general", "host")):
+        logger.error("No website(s) configured, Isso won't work.")
+        sys.exit(1)
+
     if conf.get("server", "listen").startswith("http://"):
-        host, port, _ = parse.host(conf.get("server", "listen"))
+        host, port, _ = urlsplit(conf.get("server", "listen"))
         try:
             from gevent.pywsgi import WSGIServer
             WSGIServer((host, port), make_app(conf)).serve_forever()
