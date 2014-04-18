@@ -8,6 +8,7 @@ Build-Depends: python-setuptools (>= 0.6b3),
 Standards-Version: 3.9.1
 Vcs-Browser: http://github.com/jgraichen/debian-isso
 Vcs-Git: git://github.com/jgraichen/debian-isso.git
+X-Python-Version: 2.7
 
 Package: isso
 Architecture: all
