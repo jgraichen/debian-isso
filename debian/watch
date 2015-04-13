@@ -1,3 +1,4 @@
 version=3
-https://pypi.python.org/packages/source/i/isso/ isso-(.*)\.tar\.gz
+opts=uversionmangle=s/(rc|a|b|c)/~$1/ \
+http://pypi.debian.net/isso/isso-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
 
