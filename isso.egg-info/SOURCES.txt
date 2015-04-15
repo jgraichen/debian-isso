@@ -21,6 +21,7 @@ isso/db/comments.py
 isso/db/preferences.py
 isso/db/spam.py
 isso/db/threads.py
+isso/demo/index.html
 isso/ext/__init__.py
 isso/ext/notifications.py
 isso/js/count.dev.js
@@ -28,7 +29,6 @@ isso/js/count.min.js
 isso/js/embed.dev.js
 isso/js/embed.min.js
 isso/utils/__init__.py
-isso/utils/crypto.py
 isso/utils/html.py
 isso/utils/http.py
 isso/utils/parse.py

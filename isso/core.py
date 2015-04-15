@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import io
 import time
@@ -8,7 +8,12 @@ import logging
 import threading
 import multiprocessing
 
-from configparser import ConfigParser
+from email.utils import parseaddr, formataddr
+
+try:
+    from backports.configparser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
 
 try:
     import uwsgi
@@ -94,7 +99,8 @@ class Config:
         "dbpath = /tmp/isso.db",
         "host = ",
         "max-age = 15m",
-        "notify = ",
+        "notify = stdout",
+        "log-file = ",
         "[moderation]",
         "enabled = false",
         "purge-after = 30d",
@@ -112,7 +118,7 @@ class Config:
         "direct-reply = 3",
         "reply-to-self = false",
         "[markup]",
-        "options = strikethrough, autolink",
+        "options = strikethrough, autolink, fenced_code",
         "allowed-elements = ",
         "allowed-attributes = "
     ]
@@ -144,6 +150,9 @@ class Config:
                 if item == ("general", "session-key"):
                     logger.info("Your `session-key` has been stored in the "
                                 "database itself, this option is now unused")
+
+        if not parseaddr(rv.get("smtp", "from"))[0]:
+            rv.set("smtp", "from", formataddr((u"Ich schrei sonst!", rv.get("smtp", "from"))))
 
         return rv
 

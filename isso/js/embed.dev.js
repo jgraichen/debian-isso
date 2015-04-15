@@ -1,5 +1,4 @@
-(function () {
-/**
+(function () {/**
  * @license almond 0.2.9 Copyright (c) 2011-2014, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/almond for details
@@ -458,15 +457,21 @@ define('app/config',[],function() {
         "css": true,
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
         "reply-to-self": false,
+        "max-comments-top": "inf",
+        "max-comments-nested": 5,
+        "reveal-on-click": 5,
+        "avatar": true,
         "avatar-bg": "#f0f0f0",
         "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
-                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" ")
+                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" "),
+        "vote": true
     };
 
     var js = document.getElementsByTagName("script");
 
     for (var i = 0; i < js.length; i++) {
-        [].forEach.call(js[i].attributes, function(attr) {
+        for (var j = 0; j < js[i].attributes.length; j++) {
+            var attr = js[i].attributes[j];
             if (/^data-isso-/.test(attr.name)) {
                 try {
                     config[attr.name.substring(10)] = JSON.parse(attr.value);
@@ -474,7 +479,7 @@ define('app/config',[],function() {
                     config[attr.name.substring(10)] = attr.value;
                 }
             }
-        });
+        }
     }
 
     // split avatar-fg on whitespace
@@ -482,6 +487,248 @@ define('app/config',[],function() {
 
     return config;
 
+});
+
+define('app/i18n/de',{
+    "postbox-text": "Kommentar hier eintippen (mindestens 3 Zeichen)",
+    "postbox-author": "Name (optional)",
+    "postbox-email": "Email (optional)",
+    "postbox-website": "Website (optional)",
+    "postbox-submit": "Abschicken",
+    "num-comments": "1 Kommentar\n{{ n }} Kommentare",
+    "no-comments": "Keine Kommentare bis jetzt",
+    "comment-reply": "Antworten",
+    "comment-edit": "Bearbeiten",
+    "comment-save": "Speichern",
+    "comment-delete": "Löschen",
+    "comment-confirm": "Bestätigen",
+    "comment-close": "Schließen",
+    "comment-cancel": "Abbrechen",
+    "comment-deleted": "Kommentar gelöscht.",
+    "comment-queued": "Kommentar muss noch freigeschaltet werden.",
+    "comment-anonymous": "Anonym",
+    "comment-hidden": "{{ n }} versteckt",
+    "date-now": "eben jetzt",
+    "date-minute": "vor einer Minute\nvor {{ n }} Minuten",
+    "date-hour": "vor einer Stunde\nvor {{ n }} Stunden",
+    "date-day": "Gestern\nvor {{ n }} Tagen",
+    "date-week": "letzte Woche\nvor {{ n }} Wochen",
+    "date-month": "letzten Monat\nvor {{ n }} Monaten",
+    "date-year": "letztes Jahr\nvor {{ n }} Jahren"
+});
+
+define('app/i18n/en',{
+    "postbox-text": "Type Comment Here (at least 3 chars)",
+    "postbox-author": "Name (optional)",
+    "postbox-email": "E-mail (optional)",
+    "postbox-website": "Website (optional)",
+    "postbox-submit": "Submit",
+
+    "num-comments": "One Comment\n{{ n }} Comments",
+    "no-comments": "No Comments Yet",
+
+    "comment-reply": "Reply",
+    "comment-edit": "Edit",
+    "comment-save": "Save",
+    "comment-delete": "Delete",
+    "comment-confirm": "Confirm",
+    "comment-close": "Close",
+    "comment-cancel": "Cancel",
+    "comment-deleted": "Comment deleted.",
+    "comment-queued": "Comment in queue for moderation.",
+    "comment-anonymous": "Anonymous",
+    "comment-hidden": "{{ n }} Hidden",
+
+    "date-now": "right now",
+    "date-minute": "a minute ago\n{{ n }} minutes ago",
+    "date-hour": "an hour ago\n{{ n }} hours ago",
+    "date-day": "Yesterday\n{{ n }} days ago",
+    "date-week": "last week\n{{ n }} weeks ago",
+    "date-month": "last month\n{{ n }} months ago",
+    "date-year": "last year\n{{ n }} years ago"
+});
+
+define('app/i18n/fr',{
+    "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
+    "postbox-author": "Nom (optionnel)",
+    "postbox-email": "Courriel (optionnel)",
+    "postbox-website": "Site web (optionnel)",
+    "postbox-submit": "Soumettre",
+    "num-comments": "{{ n }} commentaire\n{{ n }} commentaires",
+    "no-comments": "Aucun commentaire pour l'instant",
+    "comment-reply": "Répondre",
+    "comment-edit": "Éditer",
+    "comment-save": "Enregistrer",
+    "comment-delete": "Supprimer",
+    "comment-confirm": "Confirmer",
+    "comment-close": "Fermer",
+    "comment-cancel": "Annuler",
+    "comment-deleted": "Commentaire supprimé.",
+    "comment-queued": "Commentaire en attente de modération.",
+    "comment-anonymous": "Anonyme",
+    "comment-hidden": "1 caché\n{{ n }} cachés",
+    "date-now": "À l'instant",
+    "date-minute": "Il y a une minute\nIl y a {{ n }} minutes",
+    "date-hour": "Il y a une heure\nIl y a {{ n }} heures ",
+    "date-day": "Hier\nIl y a {{ n }} jours",
+    "date-week": "Il y a une semaine\nIl y a {{ n }} semaines",
+    "date-month": "Il y a un mois\nIl y a {{ n }} mois",
+    "date-year": "Il y a un an\nIl y a {{ n }} ans"
+});
+
+define('app/i18n/ru',{
+    "postbox-text": "Комментировать здесь  (минимум 3 символа)",
+    "postbox-author": "Имя (необязательно)",
+    "postbox-email": "Email (необязательно)",
+    "postbox-submit": "Отправить",
+    "num-comments": "1 Комментарий\n{{ n }} Комментарии",
+    "no-comments": "Нет Комментарев",
+    "comment-reply": "Ответить",
+    "comment-edit": "Правка",
+    "comment-save": "Сохранить",
+    "comment-delete": "Удалить",
+    "comment-confirm": "Подтвердить",
+    "comment-close": "Закрыть",
+    "comment-cancel": "Отменить",
+    "comment-deleted": "Удалить комментарий",
+    "comment-queued": "Комментарий должен быть разблокирован",
+    "comment-anonymous": "Анонимный",
+    "date-now": "Сейчас",
+    "date-minute": "Минут назад\n{{ n }} минут",
+    "date-hour": "Час назад\n{{ n }} часов",
+    "date-day": "Вчера\n{{ n }} дней",
+    "date-week": "на прошлой недели\n{{ n }} недель",
+    "date-month": "в прошоим месяце\n{{ n }} месяцов",
+    "date-year": "в прошлом году\n{{ n }} года\n{{ n }} лет"
+});
+
+define('app/i18n/it',{
+    "postbox-text": "Scrivi un commento qui (minimo 3 caratteri)",
+    "postbox-author": "Nome (opzionale)",
+    "postbox-email": "E-mail (opzionale)",
+    "postbox-website": "Sito web (opzionale)",
+    "postbox-submit": "Invia",
+    "num-comments": "Un Commento\n{{ n }} Commenti",
+    "no-comments": "Ancora Nessun Commento",
+    "comment-reply": "Rispondi",
+    "comment-edit": "Modifica",
+    "comment-save": "Salva",
+    "comment-delete": "Elimina",
+    "comment-confirm": "Conferma",
+    "comment-close": "Chiudi",
+    "comment-cancel": "Cancella",
+    "comment-deleted": "Commento eliminato.",
+    "comment-queued": "Commento in coda per moderazione.",
+    "comment-anonymous": "Anonimo",
+    "comment-hidden": "{{ n }} Nascosto",
+    "date-now": "poco fa",
+    "date-minute": "un minuto fa\n{{ n }} minuti fa",
+    "date-hour": "un ora fa\n{{ n }} ore fa",
+    "date-day": "Ieri\n{{ n }} giorni fa",
+    "date-week": "questa settimana\n{{ n }} settimane fa",
+    "date-month": "questo mese\n{{ n }} mesi fa",
+    "date-year": "quest'anno\n{{ n }} anni fa"
+});
+
+define('app/i18n/eo',{
+    "postbox-text": "Tajpu komenton ĉi-tie (almenaŭ 3 signoj)",
+    "postbox-author": "Nomo (malnepra)",
+    "postbox-email": "Retadreso (malnepra)",
+    "postbox-website": "Retejo (malnepra)",
+    "postbox-submit": "Sendu",
+    "num-comments": "{{ n }} komento\n{{ n }} komentoj",
+    "no-comments": "Neniu komento ankoraŭ",
+    "comment-reply": "Respondu",
+    "comment-edit": "Redaktu",
+    "comment-save": "Savu",
+    "comment-delete": "Forviŝu",
+    "comment-confirm": "Konfirmu",
+    "comment-close": "Fermu",
+    "comment-cancel": "Malfaru",
+    "comment-deleted": "Komento forviŝita",
+    "comment-queued": "Komento en atendovico por kontrolo.",
+    "comment-anonymous": "Sennoma",
+    "comment-hidden": "{{ n }} kaŝitaj",
+    "date-now": "ĵus nun",
+    "date-minute": "antaŭ unu minuto\nantaŭ {{ n }} minutoj",
+    "date-hour": "antaŭ unu horo\nantaŭ {{ n }} horoj",
+    "date-day": "hieraŭ\nantaŭ {{ n }} tagoj",
+    "date-week": "lasta semajno\nantaŭ {{ n }} semajnoj",
+    "date-month": "lasta monato\nantaŭ {{ n }} monatoj",
+    "date-year": "lasta jaro\nantaŭ {{ n }} jaroj"
+});
+
+define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it", "app/i18n/eo"], function(config, de, en, fr, ru, it, eo) {
+
+    
+
+    var pluralforms = function(lang) {
+        switch (lang) {
+        case "en":
+        case "de":
+        case "it":
+        case "eo":
+            return function(msgs, n) {
+                return msgs[n === 1 ? 0 : 1];
+            };
+        case "fr":
+            return function(msgs, n) {
+                return msgs[n > 1 ? 1 : 0];
+            };
+        case "ru":
+            return function(msgs, n) {
+                if (n % 10 === 1 && n % 100 !== 11) {
+                    return msgs[0];
+                } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
+                    return msgs[1];
+                } else {
+                    return typeof msgs[2] !== "undefined" ? msgs[2] : msgs[1];
+                }
+            };
+        default:
+            return null;
+        }
+    };
+
+    // useragent's prefered language (or manually overridden)
+    var lang = config.lang;
+
+    // fall back to English
+    if (! pluralforms(lang)) {
+        lang = "en";
+    }
+
+    var catalogue = {
+        de: de,
+        en: en,
+        fr: fr,
+        ru: ru,
+        it: it,
+        eo: eo
+    };
+
+    var plural = pluralforms(lang);
+
+    var translate = function(msgid) {
+        return catalogue[lang][msgid] || en[msgid] || "???";
+    };
+
+    var pluralize = function(msgid, n) {
+        var msg;
+
+        msg = translate(msgid);
+        if (msg.indexOf("\n") > -1) {
+            msg = plural(msg.split("\n"), (+ n));
+        }
+
+        return msg ? msg.replace("{{ n }}", (+ n)) : msg;
+    };
+
+    return {
+        lang: lang,
+        translate: translate,
+        pluralize: pluralize
+    };
 });
 
 define('app/lib/promise',[],function() {
@@ -504,11 +751,11 @@ define('app/lib/promise',[],function() {
         }
     };
 
-    var defer = function() {
+    var Defer = function() {
         this.promise = new Promise();
     };
 
-    defer.prototype = {
+    Defer.prototype = {
         promise: Promise,
         resolve: function(rv) {
             this.promise.success.forEach(function(callback) {
@@ -536,7 +783,7 @@ define('app/lib/promise',[],function() {
     };
 
     return {
-        defer: function() { return new defer(); },
+        defer: function() { return new Defer(); },
         when: when
     };
 
@@ -643,7 +890,8 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
     var qs = function(params) {
         var rv = "";
         for (var key in params) {
-            if (params.hasOwnProperty(key) && params[key]) {
+            if (params.hasOwnProperty(key) &&
+                params[key] !== null && typeof(params[key]) !== "undefined") {
                 rv += key + "=" + encodeURIComponent(params[key]) + "&";
             }
         }
@@ -693,17 +941,31 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
         return deferred.promise;
     };
 
-    var fetch = function(tid) {
+    var fetch = function(tid, limit, nested_limit, parent, lastcreated) {
+        if (typeof(limit) === 'undefined') { limit = "inf"; }
+        if (typeof(nested_limit) === 'undefined') { nested_limit = "inf"; }
+        if (typeof(parent) === 'undefined') { parent = null; }
+
+        var query_dict = {uri: tid || location, after: lastcreated, parent: parent};
+
+        if(limit !== "inf") {
+            query_dict['limit'] = limit;
+        }
+        if(nested_limit !== "inf"){
+            query_dict['nested_limit'] = nested_limit;
+        }
+
         var deferred = Q.defer();
-        curl("GET", endpoint + "/?" + qs({uri: tid || location}), null, function(rv) {
-            if (rv.status === 200) {
-                deferred.resolve(JSON.parse(rv.body));
-            } else if (rv.status === 404) {
-                deferred.resolve([]);
-            } else {
-                deferred.reject(rv.body);
-            }
-        });
+        curl("GET", endpoint + "/?" +
+            qs(query_dict), null, function(rv) {
+                if (rv.status === 200) {
+                    deferred.resolve(JSON.parse(rv.body));
+                } else if (rv.status === 404) {
+                    deferred.resolve({total_replies: 0});
+                } else {
+                    deferred.reject(rv.body);
+                }
+            });
         return deferred.promise;
     };
 
@@ -733,22 +995,9 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
         return deferred.promise;
     };
 
-    var remote_addr = function() {
-        var deferred = Q.defer();
-        curl("GET", endpoint + "/check-ip", null, function(rv) {
-            if (rv.status === 200) {
-                deferred.resolve(rv.body);
-            } else {
-                deferred.reject(rv.body);
-            }
-        });
-        return deferred.promise;
-    };
-
     return {
         endpoint: endpoint,
         salt: salt,
-        remote_addr: remote_addr,
 
         create: create,
         modify: modify,
@@ -758,404 +1007,6 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
         count: count,
         like: like,
         dislike: dislike
-    };
-});
-
-/**
- * @license RequireJS text 2.0.10 Copyright (c) 2010-2012, The Dojo Foundation All Rights Reserved.
- * Available via the MIT or new BSD license.
- * see: http://github.com/requirejs/text for details
- */
-/*jslint regexp: true */
-/*global require, XMLHttpRequest, ActiveXObject,
-  define, window, process, Packages,
-  java, location, Components, FileUtils */
-
-define('text',['module'], function (module) {
-    
-
-    var text, fs, Cc, Ci, xpcIsWindows,
-        progIds = ['Msxml2.XMLHTTP', 'Microsoft.XMLHTTP', 'Msxml2.XMLHTTP.4.0'],
-        xmlRegExp = /^\s*<\?xml(\s)+version=[\'\"](\d)*.(\d)*[\'\"](\s)*\?>/im,
-        bodyRegExp = /<body[^>]*>\s*([\s\S]+)\s*<\/body>/im,
-        hasLocation = typeof location !== 'undefined' && location.href,
-        defaultProtocol = hasLocation && location.protocol && location.protocol.replace(/\:/, ''),
-        defaultHostName = hasLocation && location.hostname,
-        defaultPort = hasLocation && (location.port || undefined),
-        buildMap = {},
-        masterConfig = (module.config && module.config()) || {};
-
-    text = {
-        version: '2.0.10',
-
-        strip: function (content) {
-            //Strips <?xml ...?> declarations so that external SVG and XML
-            //documents can be added to a document without worry. Also, if the string
-            //is an HTML document, only the part inside the body tag is returned.
-            if (content) {
-                content = content.replace(xmlRegExp, "");
-                var matches = content.match(bodyRegExp);
-                if (matches) {
-                    content = matches[1];
-                }
-            } else {
-                content = "";
-            }
-            return content;
-        },
-
-        jsEscape: function (content) {
-            return content.replace(/(['\\])/g, '\\$1')
-                .replace(/[\f]/g, "\\f")
-                .replace(/[\b]/g, "\\b")
-                .replace(/[\n]/g, "\\n")
-                .replace(/[\t]/g, "\\t")
-                .replace(/[\r]/g, "\\r")
-                .replace(/[\u2028]/g, "\\u2028")
-                .replace(/[\u2029]/g, "\\u2029");
-        },
-
-        createXhr: masterConfig.createXhr || function () {
-            //Would love to dump the ActiveX crap in here. Need IE 6 to die first.
-            var xhr, i, progId;
-            if (typeof XMLHttpRequest !== "undefined") {
-                return new XMLHttpRequest();
-            } else if (typeof ActiveXObject !== "undefined") {
-                for (i = 0; i < 3; i += 1) {
-                    progId = progIds[i];
-                    try {
-                        xhr = new ActiveXObject(progId);
-                    } catch (e) {}
-
-                    if (xhr) {
-                        progIds = [progId];  // so faster next time
-                        break;
-                    }
-                }
-            }
-
-            return xhr;
-        },
-
-        /**
-         * Parses a resource name into its component parts. Resource names
-         * look like: module/name.ext!strip, where the !strip part is
-         * optional.
-         * @param {String} name the resource name
-         * @returns {Object} with properties "moduleName", "ext" and "strip"
-         * where strip is a boolean.
-         */
-        parseName: function (name) {
-            var modName, ext, temp,
-                strip = false,
-                index = name.indexOf("."),
-                isRelative = name.indexOf('./') === 0 ||
-                             name.indexOf('../') === 0;
-
-            if (index !== -1 && (!isRelative || index > 1)) {
-                modName = name.substring(0, index);
-                ext = name.substring(index + 1, name.length);
-            } else {
-                modName = name;
-            }
-
-            temp = ext || modName;
-            index = temp.indexOf("!");
-            if (index !== -1) {
-                //Pull off the strip arg.
-                strip = temp.substring(index + 1) === "strip";
-                temp = temp.substring(0, index);
-                if (ext) {
-                    ext = temp;
-                } else {
-                    modName = temp;
-                }
-            }
-
-            return {
-                moduleName: modName,
-                ext: ext,
-                strip: strip
-            };
-        },
-
-        xdRegExp: /^((\w+)\:)?\/\/([^\/\\]+)/,
-
-        /**
-         * Is an URL on another domain. Only works for browser use, returns
-         * false in non-browser environments. Only used to know if an
-         * optimized .js version of a text resource should be loaded
-         * instead.
-         * @param {String} url
-         * @returns Boolean
-         */
-        useXhr: function (url, protocol, hostname, port) {
-            var uProtocol, uHostName, uPort,
-                match = text.xdRegExp.exec(url);
-            if (!match) {
-                return true;
-            }
-            uProtocol = match[2];
-            uHostName = match[3];
-
-            uHostName = uHostName.split(':');
-            uPort = uHostName[1];
-            uHostName = uHostName[0];
-
-            return (!uProtocol || uProtocol === protocol) &&
-                   (!uHostName || uHostName.toLowerCase() === hostname.toLowerCase()) &&
-                   ((!uPort && !uHostName) || uPort === port);
-        },
-
-        finishLoad: function (name, strip, content, onLoad) {
-            content = strip ? text.strip(content) : content;
-            if (masterConfig.isBuild) {
-                buildMap[name] = content;
-            }
-            onLoad(content);
-        },
-
-        load: function (name, req, onLoad, config) {
-            //Name has format: some.module.filext!strip
-            //The strip part is optional.
-            //if strip is present, then that means only get the string contents
-            //inside a body tag in an HTML string. For XML/SVG content it means
-            //removing the <?xml ...?> declarations so the content can be inserted
-            //into the current doc without problems.
-
-            // Do not bother with the work if a build and text will
-            // not be inlined.
-            if (config.isBuild && !config.inlineText) {
-                onLoad();
-                return;
-            }
-
-            masterConfig.isBuild = config.isBuild;
-
-            var parsed = text.parseName(name),
-                nonStripName = parsed.moduleName +
-                    (parsed.ext ? '.' + parsed.ext : ''),
-                url = req.toUrl(nonStripName),
-                useXhr = (masterConfig.useXhr) ||
-                         text.useXhr;
-
-            // Do not load if it is an empty: url
-            if (url.indexOf('empty:') === 0) {
-                onLoad();
-                return;
-            }
-
-            //Load the text. Use XHR if possible and in a browser.
-            if (!hasLocation || useXhr(url, defaultProtocol, defaultHostName, defaultPort)) {
-                text.get(url, function (content) {
-                    text.finishLoad(name, parsed.strip, content, onLoad);
-                }, function (err) {
-                    if (onLoad.error) {
-                        onLoad.error(err);
-                    }
-                });
-            } else {
-                //Need to fetch the resource across domains. Assume
-                //the resource has been optimized into a JS module. Fetch
-                //by the module name + extension, but do not include the
-                //!strip part to avoid file system issues.
-                req([nonStripName], function (content) {
-                    text.finishLoad(parsed.moduleName + '.' + parsed.ext,
-                                    parsed.strip, content, onLoad);
-                });
-            }
-        },
-
-        write: function (pluginName, moduleName, write, config) {
-            if (buildMap.hasOwnProperty(moduleName)) {
-                var content = text.jsEscape(buildMap[moduleName]);
-                write.asModule(pluginName + "!" + moduleName,
-                               "define(function () { return '" +
-                                   content +
-                               "';});\n");
-            }
-        },
-
-        writeFile: function (pluginName, moduleName, req, write, config) {
-            var parsed = text.parseName(moduleName),
-                extPart = parsed.ext ? '.' + parsed.ext : '',
-                nonStripName = parsed.moduleName + extPart,
-                //Use a '.js' file name so that it indicates it is a
-                //script that can be loaded across domains.
-                fileName = req.toUrl(parsed.moduleName + extPart) + '.js';
-
-            //Leverage own load() method to load plugin value, but only
-            //write out values that do not have the strip argument,
-            //to avoid any potential issues with ! in file names.
-            text.load(nonStripName, req, function (value) {
-                //Use own write() method to construct full module value.
-                //But need to create shell that translates writeFile's
-                //write() to the right interface.
-                var textWrite = function (contents) {
-                    return write(fileName, contents);
-                };
-                textWrite.asModule = function (moduleName, contents) {
-                    return write.asModule(moduleName, fileName, contents);
-                };
-
-                text.write(pluginName, nonStripName, textWrite, config);
-            }, config);
-        }
-    };
-
-    if (masterConfig.env === 'node' || (!masterConfig.env &&
-            typeof process !== "undefined" &&
-            process.versions &&
-            !!process.versions.node &&
-            !process.versions['node-webkit'])) {
-        //Using special require.nodeRequire, something added by r.js.
-        fs = require.nodeRequire('fs');
-
-        text.get = function (url, callback, errback) {
-            try {
-                var file = fs.readFileSync(url, 'utf8');
-                //Remove BOM (Byte Mark Order) from utf8 files if it is there.
-                if (file.indexOf('\uFEFF') === 0) {
-                    file = file.substring(1);
-                }
-                callback(file);
-            } catch (e) {
-                errback(e);
-            }
-        };
-    } else if (masterConfig.env === 'xhr' || (!masterConfig.env &&
-            text.createXhr())) {
-        text.get = function (url, callback, errback, headers) {
-            var xhr = text.createXhr(), header;
-            xhr.open('GET', url, true);
-
-            //Allow plugins direct access to xhr headers
-            if (headers) {
-                for (header in headers) {
-                    if (headers.hasOwnProperty(header)) {
-                        xhr.setRequestHeader(header.toLowerCase(), headers[header]);
-                    }
-                }
-            }
-
-            //Allow overrides specified in config
-            if (masterConfig.onXhr) {
-                masterConfig.onXhr(xhr, url);
-            }
-
-            xhr.onreadystatechange = function (evt) {
-                var status, err;
-                //Do not explicitly handle errors, those should be
-                //visible via console output in the browser.
-                if (xhr.readyState === 4) {
-                    status = xhr.status;
-                    if (status > 399 && status < 600) {
-                        //An http 4xx or 5xx error. Signal an error.
-                        err = new Error(url + ' HTTP status: ' + status);
-                        err.xhr = xhr;
-                        errback(err);
-                    } else {
-                        callback(xhr.responseText);
-                    }
-
-                    if (masterConfig.onXhrComplete) {
-                        masterConfig.onXhrComplete(xhr, url);
-                    }
-                }
-            };
-            xhr.send(null);
-        };
-    } else if (masterConfig.env === 'rhino' || (!masterConfig.env &&
-            typeof Packages !== 'undefined' && typeof java !== 'undefined')) {
-        //Why Java, why is this so awkward?
-        text.get = function (url, callback) {
-            var stringBuffer, line,
-                encoding = "utf-8",
-                file = new java.io.File(url),
-                lineSeparator = java.lang.System.getProperty("line.separator"),
-                input = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(file), encoding)),
-                content = '';
-            try {
-                stringBuffer = new java.lang.StringBuffer();
-                line = input.readLine();
-
-                // Byte Order Mark (BOM) - The Unicode Standard, version 3.0, page 324
-                // http://www.unicode.org/faq/utf_bom.html
-
-                // Note that when we use utf-8, the BOM should appear as "EF BB BF", but it doesn't due to this bug in the JDK:
-                // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4508058
-                if (line && line.length() && line.charAt(0) === 0xfeff) {
-                    // Eat the BOM, since we've already found the encoding on this file,
-                    // and we plan to concatenating this buffer with others; the BOM should
-                    // only appear at the top of a file.
-                    line = line.substring(1);
-                }
-
-                if (line !== null) {
-                    stringBuffer.append(line);
-                }
-
-                while ((line = input.readLine()) !== null) {
-                    stringBuffer.append(lineSeparator);
-                    stringBuffer.append(line);
-                }
-                //Make sure we return a JavaScript string and not a Java string.
-                content = String(stringBuffer.toString()); //String
-            } finally {
-                input.close();
-            }
-            callback(content);
-        };
-    } else if (masterConfig.env === 'xpconnect' || (!masterConfig.env &&
-            typeof Components !== 'undefined' && Components.classes &&
-            Components.interfaces)) {
-        //Avert your gaze!
-        Cc = Components.classes,
-        Ci = Components.interfaces;
-        Components.utils['import']('resource://gre/modules/FileUtils.jsm');
-        xpcIsWindows = ('@mozilla.org/windows-registry-key;1' in Cc);
-
-        text.get = function (url, callback) {
-            var inStream, convertStream, fileObj,
-                readData = {};
-
-            if (xpcIsWindows) {
-                url = url.replace(/\//g, '\\');
-            }
-
-            fileObj = new FileUtils.File(url);
-
-            //XPCOM, you so crazy
-            try {
-                inStream = Cc['@mozilla.org/network/file-input-stream;1']
-                           .createInstance(Ci.nsIFileInputStream);
-                inStream.init(fileObj, 1, 0, false);
-
-                convertStream = Cc['@mozilla.org/intl/converter-input-stream;1']
-                                .createInstance(Ci.nsIConverterInputStream);
-                convertStream.init(inStream, "utf-8", inStream.available(),
-                Ci.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
-
-                convertStream.readString(inStream.available(), readData);
-                convertStream.close();
-                inStream.close();
-                callback(readData.value);
-            } catch (e) {
-                throw new Error((fileObj && fileObj.path || '') + ': ' + e);
-            }
-        };
-    }
-    return text;
-});
-
-define('text!app/text/postbox.html',[],function () { return '<div class="postbox">\n    <div class="avatar">\n        <svg class="blank" data-hash="{{ hash }}"></svg>\n    </div>\n    <div class="form-wrapper">\n        <div class="textarea-wrapper">\n            <div class="textarea placeholder" contenteditable="true">{{ i18n-postbox-text }}</div>\n        </div>\n        <section class="auth-section">\n            <p class="input-wrapper">\n                <input type="text" name="author" placeholder="{{ i18n-postbox-author }}"/>\n            </p>\n            <p class="input-wrapper">\n                <input type="email" name="email" placeholder="{{ i18n-postbox-email }}"/>\n            </p>\n            <p class="post-action">\n                <input type="submit" value="{{ i18n-postbox-submit }}"/>\n            </p>\n        </section>\n    </div>\n</div>';});
-
-define('text!app/text/comment.html',[],function () { return '<div class="isso-comment" id="isso-{{ id | blank }}">\n    <div class="avatar">\n        <svg data-hash="{{ hash }}"></svg>\n    </div>\n    <div class="text-wrapper">\n        <div class="isso-comment-header" role="meta">\n            {{ if bool(website) }}\n            <a class="author" href="{{ website }}" rel="nofollow">\n                {{ author | blank : `i18n-comment-anonymous` }}\n            </a>\n            {{ else }}\n                <span class="author">\n                    {{ author | blank : `i18n-comment-anonymous` }}\n                </span>\n            {{ /if }}\n\n            {{ if parent }}\n            <span class="spacer">•</span>\n            <a class="parent" href="#isso-{{ parent }}">\n                <i>{{ svg-forward }}</i>{{ replyto | blank: `i18n-comment-anonymous` }}\n            </a>\n            {{ /if }}\n\n            <span class="spacer">•</span>\n\n            <a class="permalink" href="#isso-{{ id }}">\n                <date datetime="{{ created | datetime }}"></date>\n            </a>\n\n            <span class="note">\n            {{ if mode | equals : 2 }}\n                {{ i18n-comment-queued }}\n            {{ /if }}\n            {{ if mode | equals : 4 }}\n                {{ i18n-comment-deleted }}\n            {{ /if }}\n            </span>\n\n        </div>\n        <div class="text">\n            {{ if mode | equals : 4 }}\n                <p>&nbsp;</p>\n            {{ else }}\n                {{ text }}\n            {{ /if }}\n        </div>\n        <div class="isso-comment-footer">\n            {{ if likes | substract : `dislikes` | notequals : 0 }}\n                <span class="votes">{{ likes | substract : `dislikes` }}</span>\n            {{ /if }}\n            <a class="upvote" href="#"><i>{{ svg-arrow-up}}</i></a>\n            <span class="spacer">|</span>\n            <a class="downvote" href="#"><i>{{ svg-arrow-down}}</i></a>\n\n            <a class="reply" href="#">{{ i18n-comment-reply }}</a>\n            <a class="edit" href="#">{{ i18n-comment-edit }}</a>\n            <a class="delete" href="#">{{ i18n-comment-delete }}</a>\n        </div>\n        <div class="isso-follow-up">\n        </div>\n    </div>\n</div>';});
-
-define('app/text/html',["text!./postbox.html", "text!./comment.html"], function (postbox, comment) {
-    return {
-        postbox: postbox,
-        comment: comment
     };
 });
 
@@ -1200,31 +1051,31 @@ define('app/dom',[],function() {
         });
     };
 
-    window.Element.prototype.toggle = function(type, on, off) {
+    window.Element.prototype.toggle = function(type, a, b) {
         /*
         Toggle between two internal states on event :param type: e.g. to
-        cycle form visibility. Callback :param on: is called on first event,
-        :param off: next time.
+        cycle form visibility. Callback :param a: is called on first event,
+        :param b: next time.
 
         You can skip to the next state without executing the callback with
         `toggler.next()`. You can prevent a cycle when you call `toggler.wait()`
         during an event.
          */
 
-        function Toggle(el, on, off) {
+        function Toggle(el, a, b) {
             this.state = false;
             this.el = el;
-            this.on = on;
-            this.off = off;
+            this.a = a;
+            this.b = b;
         }
 
         Toggle.prototype.next = function next() {
             if (! this.state) {
                 this.state = true;
-                this.on(this);
+                this.a(this);
             } else {
                 this.state = false;
-                this.off(this);
+                this.b(this);
             }
         };
 
@@ -1232,7 +1083,7 @@ define('app/dom',[],function() {
             this.state = ! this.state;
         };
 
-        var toggler = new Toggle(this, on, off);
+        var toggler = new Toggle(this, a, b);
         this.on(type, function() {
             toggler.next();
         });
@@ -1252,13 +1103,25 @@ define('app/dom',[],function() {
         this.parentNode.removeChild(this);
     };
 
-    var DOM = function(query, root) {
+    window.Element.prototype.show = function() {
+        this.style.display = "block";
+    };
+
+    window.Element.prototype.hide = function() {
+        this.style.display = "none";
+    };
+
+    var DOM = function(query, root, single) {
         /*
         jQuery-like CSS selector which returns on :param query: either a
-        single node, a node list or null.
+        single node (unless single=false), a node list or null.
 
         :param root: only queries within the given element.
          */
+
+        if (typeof single === "undefined") {
+            single = true;
+        }
 
         if (! root) {
             root = window.document;
@@ -1270,7 +1133,7 @@ define('app/dom',[],function() {
             return null;
         }
 
-        if (elements.length === 1) {
+        if (elements.length === 1 && single) {
             return elements[0];
         }
 
@@ -1323,739 +1186,18 @@ define('app/dom',[],function() {
 
     return DOM;
 });
-/*
-  Markup.js v1.5.16: http://github.com/adammark/Markup.js
-  MIT License
-  (c) 2011 - 2013 Adam Mark
-*/
-var Mark = {
-    // Templates to include, by name. A template is a string.
-    includes: {},
-
-    // Global variables, by name. Global variables take precedence over context variables.
-    globals: {},
-
-    // The delimiter to use in pipe expressions, e.g. {{if color|like>red}}.
-    delimiter: ">",
-
-    // Collapse white space between HTML elements in the resulting string.
-    compact: false,
-
-    // Shallow-copy an object.
-    _copy: function (a, b) {
-        b = b || [];
-
-        for (var i in a) {
-            b[i] = a[i];
-        }
-
-        return b;
-    },
-
-    // Get the value of a number or size of an array. This is a helper function for several pipes.
-    _size: function (a) {
-        return a instanceof Array ? a.length : (a || 0);
-    },
-
-    // This object represents an iteration. It has an index and length.
-    _iter: function (idx, size) {
-        this.idx = idx;
-        this.size = size;
-        this.length = size;
-        this.sign = "#";
-
-        // Print the index if "#" or the count if "##".
-        this.toString = function () {
-            return this.idx + this.sign.length - 1;
-        };
-    },
-
-    // Pass a value through a series of pipe expressions, e.g. _pipe(123, ["add>10","times>5"]).
-    _pipe: function (val, expressions) {
-        var expression, parts, fn, result;
-
-        // If we have expressions, pull out the first one, e.g. "add>10".
-        if ((expression = expressions.shift())) {
-
-            // Split the expression into its component parts, e.g. ["add", "10"].
-            parts = expression.split(this.delimiter);
-
-            // Pull out the function name, e.g. "add".
-            fn = parts.shift().trim();
-
-            try {
-                // Run the function, e.g. add(123, 10) ...
-                result = Mark.pipes[fn].apply(null, [val].concat(parts));
-
-                // ... then pipe again with remaining expressions.
-                val = this._pipe(result, expressions);
-            }
-            catch (e) {
-            }
-        }
-
-        // Return the piped value.
-        return val;
-    },
-
-    // TODO doc
-    _eval: function (context, filters, child) {
-        var result = this._pipe(context, filters),
-            ctx = result,
-            i = -1,
-            j,
-            opts;
-
-        if (result instanceof Array) {
-            result = "";
-            j = ctx.length;
-
-            while (++i < j) {
-                opts = {
-                    iter: new this._iter(i, j)
-                };
-                result += child ? Mark.up(child, ctx[i], opts) : ctx[i];
-            }
-        }
-        else if (result instanceof Object) {
-            result = Mark.up(child, ctx);
-        }
-
-        return result;
-    },
-
-    // Process the contents of an IF or IF/ELSE block.
-    _test: function (bool, child, context, options) {
-        // Process the child string, then split it into the IF and ELSE parts.
-        var str = Mark.up(child, context, options).split(/\{\{\s*else\s*\}\}/);
-
-        // Return the IF or ELSE part. If no ELSE, return an empty string.
-        return (bool === false ? str[1] : str[0]) || "";
-    },
-
-    // Determine the extent of a block expression, e.g. "{{foo}}...{{/foo}}"
-    _bridge: function (tpl, tkn) {
-        var exp = "{{\\s*" + tkn + "([^/}]+\\w*)?}}|{{/" + tkn + "\\s*}}",
-            re = new RegExp(exp, "g"),
-            tags = tpl.match(re) || [],
-            t,
-            i,
-            a = 0,
-            b = 0,
-            c = -1,
-            d = 0;
-
-        for (i = 0; i < tags.length; i++) {
-            t = i;
-            c = tpl.indexOf(tags[t], c + 1);
-
-            if (tags[t].indexOf("{{/") > -1) {
-                b++;
-            }
-            else {
-                a++;
-            }
-
-            if (a === b) {
-                break;
-            }
-        }
-
-        a = tpl.indexOf(tags[0]);
-        b = a + tags[0].length;
-        d = c + tags[t].length;
-
-        // Return the block, e.g. "{{foo}}bar{{/foo}}" and its child, e.g. "bar".
-        return [tpl.substring(a, d), tpl.substring(b, c)];
-    }
-};
-
-// Inject a template string with contextual data and return a new string.
-Mark.up = function (template, context, options) {
-    context = context || {};
-    options = options || {};
-
-    // Match all tags like "{{...}}".
-    var re = /\{\{(.+?)\}\}/g,
-        // All tags in the template.
-        tags = template.match(re) || [],
-        // The tag being evaluated, e.g. "{{hamster|dance}}".
-        tag,
-        // The expression to evaluate inside the tag, e.g. "hamster|dance".
-        prop,
-        // The token itself, e.g. "hamster".
-        token,
-        // An array of pipe expressions, e.g. ["more>1", "less>2"].
-        filters = [],
-        // Does the tag close itself? e.g. "{{stuff/}}".
-        selfy,
-        // Is the tag an "if" statement?
-        testy,
-        // The contents of a block tag, e.g. "{{aa}}bb{{/aa}}" -> "bb".
-        child,
-        // The resulting string.
-        result,
-        // The global variable being evaluated, or undefined.
-        global,
-        // The included template being evaluated, or undefined.
-        include,
-        // A placeholder variable.
-        ctx,
-        // Iterators.
-        i = 0,
-        j = 0;
-
-    // Set custom pipes, if provided.
-    if (options.pipes) {
-        this._copy(options.pipes, this.pipes);
-    }
-
-    // Set templates to include, if provided.
-    if (options.includes) {
-        this._copy(options.includes, this.includes);
-    }
-
-    // Set global variables, if provided.
-    if (options.globals) {
-        this._copy(options.globals, this.globals);
-    }
-
-    // Optionally override the delimiter.
-    if (options.delimiter) {
-        this.delimiter = options.delimiter;
-    }
-
-    // Optionally collapse white space.
-    if (options.compact !== undefined) {
-        this.compact = options.compact;
-    }
-
-    // Loop through tags, e.g. {{a}}, {{b}}, {{c}}, {{/c}}.
-    while ((tag = tags[i++])) {
-        result = undefined;
-        child = "";
-        selfy = tag.indexOf("/}}") > -1;
-        prop = tag.substr(2, tag.length - (selfy ? 5 : 4));
-        prop = prop.replace(/`(.+?)`/g, function (s, p1) {
-            return Mark.up("{{" + p1 + "}}", context);
-        });
-        testy = prop.trim().indexOf("if ") === 0;
-        filters = prop.split("|");
-        filters.shift(); // instead of splice(1)
-        prop = prop.replace(/^\s*if/, "").split("|").shift().trim();
-        token = testy ? "if" : prop.split("|")[0];
-        ctx = context[prop];
-
-        // If an "if" statement without filters, assume "{{if foo|notempty}}"
-        if (testy && !filters.length) {
-            filters = ["notempty"];
-        }
-
-        // Does the tag have a corresponding closing tag? If so, find it and move the cursor.
-        if (!selfy && template.indexOf("{{/" + token) > -1) {
-            result = this._bridge(template, token);
-            tag = result[0];
-            child = result[1];
-            i += tag.match(re).length - 1; // fast forward
-        }
-
-        // Skip "else" tags. These are pulled out in _test().
-        if (/^\{\{\s*else\s*\}\}$/.test(tag)) {
-            continue;
-        }
-
-        // Evaluating a global variable.
-        else if ((global = this.globals[prop]) !== undefined) {
-            result = this._eval(global, filters, child);
-        }
-
-        // Evaluating an included template.
-        else if ((include = this.includes[prop])) {
-            if (include instanceof Function) {
-                include = include();
-            }
-            result = this._pipe(Mark.up(include, context), filters);
-        }
-
-        // Evaluating a loop counter ("#" or "##").
-        else if (prop.indexOf("#") > -1) {
-            options.iter.sign = prop;
-            result = this._pipe(options.iter, filters);
-        }
-
-        // Evaluating the current context.
-        else if (prop === ".") {
-            result = this._pipe(context, filters);
-        }
-
-        // Evaluating a variable with dot notation, e.g. "a.b.c"
-        else if (prop.indexOf(".") > -1) {
-            prop = prop.split(".");
-            ctx = Mark.globals[prop[0]];
-
-            if (ctx) {
-                j = 1;
-            }
-            else {
-                j = 0;
-                ctx = context;
-            }
-
-            // Get the actual context
-            while (ctx && j < prop.length) {
-                ctx = ctx[prop[j++]];
-            }
-
-            result = this._eval(ctx, filters, child);
-        }
-
-        // Evaluating an "if" statement.
-        else if (testy) {
-            result = this._pipe(ctx, filters);
-        }
-
-        // Evaluating an array, which might be a block expression.
-        else if (ctx instanceof Array) {
-            result = this._eval(ctx, filters, child);
-        }
-
-        // Evaluating a block expression.
-        else if (child) {
-            result = ctx ? Mark.up(child, ctx) : undefined;
-        }
-
-        // Evaluating anything else.
-        else if (context.hasOwnProperty(prop)) {
-            result = this._pipe(ctx, filters);
-        }
-
-        // Evaluating an "if" statement.
-        if (testy) {
-            result = this._test(result, child, context, options);
-        }
-
-        // Replace the tag, e.g. "{{name}}", with the result, e.g. "Adam".
-        template = template.replace(tag, result === undefined ? "???" : result);
-    }
-
-    return this.compact ? template.replace(/>\s+</g, "><") : template;
-};
-
-// Freebie pipes. See usage in README.md
-Mark.pipes = {
-    empty: function (obj) {
-        return !obj || (obj + "").trim().length === 0 ? obj : false;
-    },
-    notempty: function (obj) {
-        return obj && (obj + "").trim().length ? obj : false;
-    },
-    blank: function (str, val) {
-        return !!str || str === 0 ? str : val;
-    },
-    more: function (a, b) {
-        return Mark._size(a) > b ? a : false;
-    },
-    less: function (a, b) {
-        return Mark._size(a) < b ? a : false;
-    },
-    ormore: function (a, b) {
-        return Mark._size(a) >= b ? a : false;
-    },
-    orless: function (a, b) {
-        return Mark._size(a) <= b ? a : false;
-    },
-    between: function (a, b, c) {
-        a = Mark._size(a);
-        return a >= b && a <= c ? a : false;
-    },
-    equals: function (a, b) {
-        return a == b ? a : false;
-    },
-    notequals: function (a, b) {
-        return a != b ? a : false;
-    },
-    like: function (str, pattern) {
-        return new RegExp(pattern, "i").test(str) ? str : false;
-    },
-    notlike: function (str, pattern) {
-        return !Mark.pipes.like(str, pattern) ? str : false;
-    },
-    upcase: function (str) {
-        return String(str).toUpperCase();
-    },
-    downcase: function (str) {
-        return String(str).toLowerCase();
-    },
-    capcase: function (str) {
-        return str.replace(/\b\w/g, function (s) { return s.toUpperCase(); });
-    },
-    chop: function (str, n) {
-        return str.length > n ? str.substr(0, n) + "..." : str;
-    },
-    tease: function (str, n) {
-        var a = str.split(/\s+/);
-        return a.slice(0, n).join(" ") + (a.length > n ? "..." : "");
-    },
-    trim: function (str) {
-        return str.trim();
-    },
-    pack: function (str) {
-        return str.trim().replace(/\s{2,}/g, " ");
-    },
-    round: function (num) {
-        return Math.round(+num);
-    },
-    clean: function (str) {
-        return String(str).replace(/<\/?[^>]+>/gi, "");
-    },
-    size: function (obj) {
-        return obj.length;
-    },
-    length: function (obj) {
-        return obj.length;
-    },
-    reverse: function (arr) {
-        return Mark._copy(arr).reverse();
-    },
-    join: function (arr, separator) {
-        return arr.join(separator);
-    },
-    limit: function (arr, count, idx) {
-        return arr.slice(+idx || 0, +count + (+idx || 0));
-    },
-    split: function (str, separator) {
-        return str.split(separator || ",");
-    },
-    choose: function (bool, iffy, elsy) {
-        return !!bool ? iffy : (elsy || "");
-    },
-    toggle: function (obj, csv1, csv2, str) {
-        return csv2.split(",")[csv1.match(/\w+/g).indexOf(obj + "")] || str;
-    },
-    sort: function (arr, prop) {
-        var fn = function (a, b) {
-            return a[prop] > b[prop] ? 1 : -1;
-        };
-        return Mark._copy(arr).sort(prop ? fn : undefined);
-    },
-    fix: function (num, n) {
-        return (+num).toFixed(n);
-    },
-    mod: function (num, n) {
-        return (+num) % (+n);
-    },
-    divisible: function (num, n) {
-        return num && (+num % n) === 0 ? num : false;
-    },
-    even: function (num) {
-        return num && (+num & 1) === 0 ? num : false;
-    },
-    odd: function (num) {
-        return num && (+num & 1) === 1 ? num : false;
-    },
-    number: function (str) {
-        return parseFloat(str.replace(/[^\-\d\.]/g, ""));
-    },
-    url: function (str) {
-        return encodeURI(str);
-    },
-    bool: function (obj) {
-        return !!obj;
-    },
-    falsy: function (obj) {
-        return !obj;
-    },
-    first: function (iter) {
-        return iter.idx === 0;
-    },
-    last: function (iter) {
-        return iter.idx === iter.size - 1;
-    },
-    call: function (obj, fn) {
-        return obj[fn].apply(obj, [].slice.call(arguments, 2));
-    },
-    set: function (obj, key) {
-        Mark.globals[key] = obj; return "";
-    },
-    log: function (obj) {
-        console.log(obj);
-        return obj;
-    }
-};
-
-// Shim for IE.
-if (typeof String.prototype.trim !== "function") {
-    String.prototype.trim = function() {
-        return this.replace(/^\s+|\s+$/g, ""); 
-    }
-}
-
-// Export for Node.js and AMD.
-if (typeof module !== "undefined" && module.exports) {
-    module.exports = Mark;
-}
-else if (typeof define === "function" && define.amd) {
-    define('vendor/markup',[],function() {
-        return Mark;
-    });
-}
-;
-define('app/i18n/de',{
-    "postbox-text": "Kommentar hier eintippen (mindestens 3 Zeichen)",
-    "postbox-author": "Name (optional)",
-    "postbox-email": "Email (optional)",
-    "postbox-submit": "Abschicken",
-    "num-comments": "1 Kommentar\n{{ n }} Kommentare",
-    "no-comments": "Keine Kommentare bis jetzt",
-    "comment-reply": "Antworten",
-    "comment-edit": "Bearbeiten",
-    "comment-save": "Speichern",
-    "comment-delete": "Löschen",
-    "comment-confirm": "Bestätigen",
-    "comment-close": "Schließen",
-    "comment-cancel": "Abbrechen",
-    "comment-deleted": "Kommentar gelöscht.",
-    "comment-queued": "Kommentar muss noch freigeschaltet werden.",
-    "comment-anonymous": "Anonym",
-    "date-now": "eben jetzt",
-    "date-minute": "vor einer Minute\nvor {{ n }} Minuten",
-    "date-hour": "vor einer Stunde\nvor {{ n }} Stunden",
-    "date-day": "Gestern\nvor {{ n }} Tagen",
-    "date-week": "letzte Woche\nvor {{ n }} Wochen",
-    "date-month": "letzten Monat\nvor {{ n }} Monaten",
-    "date-year": "letztes Jahr\nvor {{ n }} Jahren"
-});
-
-define('app/i18n/en',{
-    "postbox-text": "Type Comment Here (at least 3 chars)",
-    "postbox-author": "Name (optional)",
-    "postbox-email": "E-mail (optional)",
-    "postbox-submit": "Submit",
-
-    "num-comments": "One Comment\n{{ n }} Comments",
-    "no-comments": "No Comments Yet",
-
-    "comment-reply": "Reply",
-    "comment-edit": "Edit",
-    "comment-save": "Save",
-    "comment-delete": "Delete",
-    "comment-confirm": "Confirm",
-    "comment-close": "Close",
-    "comment-cancel": "Cancel",
-    "comment-deleted": "Comment deleted.",
-    "comment-queued": "Comment in queue for moderation.",
-    "comment-anonymous": "Anonymous",
-
-    "date-now": "right now",
-    "date-minute": "a minute ago\n{{ n }} minutes ago",
-    "date-hour": "an hour ago\n{{ n }} hours ago",
-    "date-day": "Yesterday\n{{ n }} days ago",
-    "date-week": "last week\n{{ n }} weeks ago",
-    "date-month": "last month\n{{ n }} months ago",
-    "date-year": "last year\n{{ n }} years ago"
-});
-
-define('app/i18n/fr',{
-    "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
-    "postbox-author": "Nom (optionel)",
-    "postbox-email": "Courriel (optionel)",
-    "postbox-submit": "Soumettre",
-    "num-comments": "{{ n }} commentaire\n{{ n }} commentaires",
-    "no-comments": "Aucun commentaire pour l'instant",
-    "comment-reply": "Répondre",
-    "comment-edit": "Éditer",
-    "comment-save": "Enregistrer",
-    "comment-delete": "Supprimer",
-    "comment-confirm": "Confirmer",
-    "comment-close": "Fermer",
-    "comment-cancel": "Annuler",
-    "comment-deleted": "Commentaire supprimé.",
-    "comment-queued": "Commentaire en attente de modération.",
-    "comment-anonymous": "Anonyme",
-    "date-now": "À l'instant'",
-    "date-minute": "Il y a une minute \n{{ n }} minutes",
-    "date-hour": "Il y a une heure\n{{ n }} heures ",
-    "date-day": "Hier\n{{ n }} jours auparavant",
-    "date-week": "Il y a une semaine\n{{ n }} semaines",
-    "date-month": "Il y a un mois\n{{ n }} mois",
-    "date-year": "Il y a un an\n{{ n }} ans"
-});
-
-define('app/i18n/ru',{
-    "postbox-text": "Комментировать здесь  (миниум 3 символа)",
-    "postbox-author": "Имя (необязательно)",
-    "postbox-email": "Email (необязательно)",
-    "postbox-submit": "Отправить",
-    "num-comments": "1 Комментарий\n{{ n }} Комментарии",
-    "no-comments": "Нет Комментарев",
-    "comment-reply": "Ответить",
-    "comment-edit": "Правка",
-    "comment-save": "Сохранить",
-    "comment-delete": "Удалить",
-    "comment-confirm": "Подтвердить",
-    "comment-close": "Закрыть",
-    "comment-cancel": "Отменить",
-    "comment-deleted": "Удалить комментарий",
-    "comment-queued": "Комментарий должен быть разблокирован",
-    "comment-anonymous": "Аномимый",
-    "date-now": "Сейчас",
-    "date-minute": "Минут назад\n{{ n }} минут",
-    "date-hour": "Час назад\n{{ n }} часов",
-    "date-day": "Вчера\n{{ n }} дней",
-    "date-week": "на прошлой недели\n{{ n }} недель",
-    "date-month": "в прошоим месяце\n{{ n }} месяцов",
-    "date-year": "в прошлом году\n{{ n }} года\n{{ n }} лет"
-});
-
-define('app/i18n/it',{
-    "postbox-text": "Scrivi un commento qui (minimo 3 caratteri)",
-    "postbox-author": "Nome (opzionale)",
-    "postbox-email": "E-mail (opzionale)",
-    "postbox-submit": "Invia",
-    "num-comments": "Un Commento\n{{ n }} Commenti",
-    "no-comments": "Ancora Nessun Commento",
-    "comment-reply": "Rispondi",
-    "comment-edit": "Modifica",
-    "comment-save": "Salva",
-    "comment-delete": "Elimina",
-    "comment-confirm": "Conferma",
-    "comment-close": "Chiudi",
-    "comment-cancel": "Cancella",
-    "comment-deleted": "Commento eliminato.",
-    "comment-queued": "Commento in coda per moderazione.",
-    "comment-anonymous": "Anonimo",
-    "date-now": "poco fa",
-    "date-minute": "un minuto fa\n{{ n }} minuti fa",
-    "date-hour": "un ora fa\n{{ n }} ore fa",
-    "date-day": "Ieri\n{{ n }} giorni fa",
-    "date-week": "questa settimana\n{{ n }} settimane fa",
-    "date-month": "questo mese\n{{ n }} mesi fa",
-    "date-year": "quest'anno\n{{ n }} anni fa"
-});
-
-define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it"], function(config, de, en, fr, ru, it) {
-
-    
-
-    // pluralization functions for each language you support
-    var plurals = {
-        "en": function(msgs, n) {
-            return msgs[n === 1 ? 0 : 1];
-        },
-        "fr": function(msgs, n) {
-            return msgs[n > 1 ? 1 : 0]
-        },
-        "ru": function(msg, n) {
-            if (n % 10 === 1 && n % 100 !== 11) {
-                return msg[0];
-            } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
-                return msg[1];
-            } else {
-                return msg[2] !== undefined ? msg[2] : msg[1];
-            }
-        }
-    };
-
-    plurals["de"] = plurals["en"];
-    plurals["it"] = plurals["en"];
-
-    // useragent's prefered language (or manually overridden)
-    var lang = config.lang;
-
-    // fall back to English
-    if (!plurals[lang]) {
-        lang = "en";
-    }
-
-    return {
-        plurals: plurals,
-        lang: lang,
-        de: de,
-        en: en,
-        fr: fr,
-        ru: ru,
-        it: it
-    };
-});
-
-define('text!app/text/forward.svg',[],function () { return '<!-- Generator: IcoMoon.io --><svg width="10" height="10" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="gray">\n  <g>\n    <path d="M 17.961,11.954L 17.961,2 L 32,16L 17.961,30L 17.961,19.958 C 10.826,19.958, 3.784,21.2,0,27.094 C 0.394,16.353, 8.43,13.796, 17.961,11.954z">\n    </path>\n  </g>\n</svg>\n';});
-
-define('text!app/text/arrow-down.svg',[],function () { return '<!-- Generator: IcoMoon.io --><svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="gray">\n  <g>\n    <path d="M 24.773,13.701c-0.651,0.669-7.512,7.205-7.512,7.205C 16.912,21.262, 16.456,21.44, 16,21.44c-0.458,0-0.914-0.178-1.261-0.534 c0,0-6.861-6.536-7.514-7.205c-0.651-0.669-0.696-1.87,0-2.586c 0.698-0.714, 1.669-0.77, 2.522,0L 16,17.112l 6.251-5.995 c 0.854-0.77, 1.827-0.714, 2.522,0C 25.47,11.83, 25.427,13.034, 24.773,13.701z">\n    </path>\n  </g>\n</svg>\n';});
-
-define('text!app/text/arrow-up.svg',[],function () { return '<!-- Generator: IcoMoon.io --><svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="gray">\n  <g>\n    <path d="M 24.773,18.299c-0.651-0.669-7.512-7.203-7.512-7.203C 16.912,10.739, 16.456,10.56, 16,10.56c-0.458,0-0.914,0.179-1.261,0.536 c0,0-6.861,6.534-7.514,7.203c-0.651,0.669-0.696,1.872,0,2.586c 0.698,0.712, 1.669,0.77, 2.522,0L 16,14.89l 6.251,5.995 c 0.854,0.77, 1.827,0.712, 2.522,0C 25.47,20.17, 25.427,18.966, 24.773,18.299z">\n    </path>\n  </g>\n</svg>\n';});
-
-define('app/text/svg',["text!./forward.svg", "text!./arrow-down.svg", "text!./arrow-up.svg"], function (forward, arrdown, arrup) {
-    return {
-        "forward": forward,
-        "arrow-down": arrdown,
-        "arrow-up": arrup
-    };
-});
-
-define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark, i18n, svg) {
-
-    
-
-    var pad = function(n, width, z) {
-        z = z || '0';
-        n = n + '';
-        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-    };
-
-    // circumvent https://github.com/adammark/Markup.js/issues/22
-    function merge(obj) {
-        var result = {};
-        for (var prefix in obj) {
-            for (var attrname in obj[prefix]) {
-                result[prefix + "-" + attrname] = obj[prefix][attrname];
-            }
-        }
-        return result;
-    }
-
-    Mark.delimiter = ":";
-    Mark.includes = merge({
-        i18n: i18n[i18n.lang],
-        svg: svg
-    });
-
-    Mark.pipes.datetime = function(date) {
-        if (typeof date !== "object") {
-            date = new Date(parseInt(date, 10) * 1000);
-        }
-
-        return [date.getUTCFullYear(), pad(date.getUTCMonth(), 2), pad(date.getUTCDay(), 2)].join("-");
-    };
-
-    Mark.pipes.substract = function(a, b) {
-        return parseInt(a, 10) - parseInt(b, 10);
-    };
-
-    Mark.pipes.pluralize = function(str, n) {
-        return i18n.plurals[i18n.lang](str.split("\n"), +n).trim();
-    };
-
-    var strip = function(string) {
-        // allow whitespace between Markup.js delimiters such as
-        // {{ var | pipe : arg }} instead of {{var|pipe:arg}}
-        return string.replace(/\{\{\s*(.+?)\s*\}\}/g, function(match, val) {
-            return ("{{" + val + "}}").replace(/\s*\|\s*/g, "|")
-                                      .replace(/\s*\:\s*/g, ":");
-        });
-    };
-
-    return {
-        up: function(template, context) {
-            return Mark.up(strip(template), context);
-        }
-    };
-});
-define('app/utils',["app/markup"], function(Mark) {
+define('app/utils',["app/i18n"], function(i18n) {
     
 
     // return `cookie` string if set
     var cookie = function(cookie) {
         return (document.cookie.match('(^|; )' + cookie + '=([^;]*)') || 0)[2];
+    };
+
+    var pad = function(n, width, z) {
+        z = z || '0';
+        n = n + '';
+        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
     };
 
     var ago = function(localTime, date) {
@@ -2069,51 +1211,429 @@ define('app/utils',["app/markup"], function(Mark) {
         var mins = Math.ceil(secs / 60), hours = Math.ceil(mins / 60),
             days = Math.ceil(hours / 24);
 
-        var i18n = function(msgid, n) {
-            if (! n) {
-                return Mark.up("{{ i18n-" + msgid + " }}");
-            } else {
-                return Mark.up("{{ i18n-" + msgid + " | pluralize : `n` }}", {n: n});
-            }
-        };
+        return secs  <=  45 && i18n.translate("date-now")  ||
+               secs  <=  90 && i18n.pluralize("date-minute", 1) ||
+               mins  <=  45 && i18n.pluralize("date-minute", mins) ||
+               mins  <=  90 && i18n.pluralize("date-hour", 1) ||
+               hours <=  22 && i18n.pluralize("date-hour", hours) ||
+               hours <=  36 && i18n.pluralize("date-day", 1) ||
+               days  <=   5 && i18n.pluralize("date-day", days) ||
+               days  <=   8 && i18n.pluralize("date-week", 1) ||
+               days  <=  21 && i18n.pluralize("date-week", Math.ceil(days / 7)) ||
+               days  <=  45 && i18n.pluralize("date-month", 1) ||
+               days  <= 345 && i18n.pluralize("date-month", Math.ceil(days / 30)) ||
+               days  <= 547 && i18n.pluralize("date-year", 1) ||
+                               i18n.pluralize("date-year", Math.ceil(days / 365.25));
+    };
 
-        return secs  <=  45 && i18n("date-now")  ||
-               secs  <=  90 && i18n("date-minute", 1) ||
-               mins  <=  45 && i18n("date-minute", mins) ||
-               mins  <=  90 && i18n("date-hour", 1) ||
-               hours <=  22 && i18n("date-hour", hours) ||
-               hours <=  36 && i18n("date-day", 1) ||
-               days  <=   5 && i18n("date-day", days) ||
-               days  <=   8 && i18n("date-week", 1) ||
-               days  <=  21 && i18n("date-week", Math.ceil(days / 7)) ||
-               days  <=  45 && i18n("date-month", 1) ||
-               days  <= 345 && i18n("date-month", Math.ceil(days / 30)) ||
-               days  <= 547 && i18n("date-year", 1) ||
-                               i18n("date-year", Math.ceil(days / 365.25));
+    var HTMLEntity = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': '&quot;',
+        "'": '&#39;',
+        "/": '&#x2F;'
+    };
+
+    var escape = function(html) {
+        return String(html).replace(/[&<>"'\/]/g, function (s) {
+            return HTMLEntity[s];
+        });
     };
 
     var text = function(html) {
         var _ = document.createElement("div");
         _.innerHTML = html.replace(/<div><br><\/div>/gi, '<br>')
                           .replace(/<div>/gi,'<br>')
-                          .replace(/<br>/gi, '\n');
+                          .replace(/<br>/gi, '\n')
+                          .replace(/&nbsp;/gi, ' ');
         return _.textContent.trim();
     };
 
     var detext = function(text) {
+        text = escape(text);
         return text.replace(/\n\n/gi, '<br><div><br></div>')
                    .replace(/\n/gi, '<br>');
     };
 
+    // Safari private browsing mode supports localStorage, but throws QUOTA_EXCEEDED_ERR
+    var localStorageImpl;
+    try {
+        localStorage.setItem("x", "y");
+        localStorage.removeItem("x");
+        localStorageImpl = localStorage;
+    } catch (ex) {
+        localStorageImpl = (function(storage) {
+            return {
+                setItem: function(key, val) {
+                    storage[key] = val;
+                },
+                getItem: function(key) {
+                    return typeof(storage[key]) !== 'undefined' ? storage[key] : null;
+                },
+                removeItem: function(key) {
+                    delete storage[key];
+                }
+            };
+        })({});
+    }
+
     return {
         cookie: cookie,
+        pad: pad,
         ago: ago,
         text: text,
-        detext: detext
+        detext: detext,
+        localStorageImpl: localStorageImpl
     };
 });
 
-define('app/lib/editor',["app/dom", "app/markup"], function($, Mark) {
+!function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define('libjs-jade-runtime',e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.jade=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+
+
+/**
+ * Merge two attribute objects giving precedence
+ * to values in object `b`. Classes are special-cased
+ * allowing for arrays and merging/joining appropriately
+ * resulting in a string.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @return {Object} a
+ * @api private
+ */
+
+exports.merge = function merge(a, b) {
+  if (arguments.length === 1) {
+    var attrs = a[0];
+    for (var i = 1; i < a.length; i++) {
+      attrs = merge(attrs, a[i]);
+    }
+    return attrs;
+  }
+  var ac = a['class'];
+  var bc = b['class'];
+
+  if (ac || bc) {
+    ac = ac || [];
+    bc = bc || [];
+    if (!Array.isArray(ac)) ac = [ac];
+    if (!Array.isArray(bc)) bc = [bc];
+    a['class'] = ac.concat(bc).filter(nulls);
+  }
+
+  for (var key in b) {
+    if (key != 'class') {
+      a[key] = b[key];
+    }
+  }
+
+  return a;
+};
+
+/**
+ * Filter null `val`s.
+ *
+ * @param {*} val
+ * @return {Boolean}
+ * @api private
+ */
+
+function nulls(val) {
+  return val != null && val !== '';
+}
+
+/**
+ * join array as classes.
+ *
+ * @param {*} val
+ * @return {String}
+ */
+exports.joinClasses = joinClasses;
+function joinClasses(val) {
+  return Array.isArray(val) ? val.map(joinClasses).filter(nulls).join(' ') : val;
+}
+
+/**
+ * Render the given classes.
+ *
+ * @param {Array} classes
+ * @param {Array.<Boolean>} escaped
+ * @return {String}
+ */
+exports.cls = function cls(classes, escaped) {
+  var buf = [];
+  for (var i = 0; i < classes.length; i++) {
+    if (escaped && escaped[i]) {
+      buf.push(exports.escape(joinClasses([classes[i]])));
+    } else {
+      buf.push(joinClasses(classes[i]));
+    }
+  }
+  var text = joinClasses(buf);
+  if (text.length) {
+    return ' class="' + text + '"';
+  } else {
+    return '';
+  }
+};
+
+/**
+ * Render the given attribute.
+ *
+ * @param {String} key
+ * @param {String} val
+ * @param {Boolean} escaped
+ * @param {Boolean} terse
+ * @return {String}
+ */
+exports.attr = function attr(key, val, escaped, terse) {
+  if ('boolean' == typeof val || null == val) {
+    if (val) {
+      return ' ' + (terse ? key : key + '="' + key + '"');
+    } else {
+      return '';
+    }
+  } else if (0 == key.indexOf('data') && 'string' != typeof val) {
+    return ' ' + key + "='" + JSON.stringify(val).replace(/'/g, '&apos;') + "'";
+  } else if (escaped) {
+    return ' ' + key + '="' + exports.escape(val) + '"';
+  } else {
+    return ' ' + key + '="' + val + '"';
+  }
+};
+
+/**
+ * Render the given attributes object.
+ *
+ * @param {Object} obj
+ * @param {Object} escaped
+ * @return {String}
+ */
+exports.attrs = function attrs(obj, terse){
+  var buf = [];
+
+  var keys = Object.keys(obj);
+
+  if (keys.length) {
+    for (var i = 0; i < keys.length; ++i) {
+      var key = keys[i]
+        , val = obj[key];
+
+      if ('class' == key) {
+        if (val = joinClasses(val)) {
+          buf.push(' ' + key + '="' + val + '"');
+        }
+      } else {
+        buf.push(exports.attr(key, val, false, terse));
+      }
+    }
+  }
+
+  return buf.join('');
+};
+
+/**
+ * Escape the given string of `html`.
+ *
+ * @param {String} html
+ * @return {String}
+ * @api private
+ */
+
+exports.escape = function escape(html){
+  var result = String(html)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  if (result === '' + html) return html;
+  else return result;
+};
+
+/**
+ * Re-throw the given `err` in context to the
+ * the jade in `filename` at the given `lineno`.
+ *
+ * @param {Error} err
+ * @param {String} filename
+ * @param {String} lineno
+ * @api private
+ */
+
+exports.rethrow = function rethrow(err, filename, lineno, str){
+  if (!(err instanceof Error)) throw err;
+  if ((typeof window != 'undefined' || !filename) && !str) {
+    err.message += ' on line ' + lineno;
+    throw err;
+  }
+  try {
+    str =  str || _dereq_('fs').readFileSync(filename, 'utf8')
+  } catch (ex) {
+    rethrow(err, null, lineno)
+  }
+  var context = 3
+    , lines = str.split('\n')
+    , start = Math.max(lineno - context, 0)
+    , end = Math.min(lines.length, lineno + context);
+
+  // Error context
+  var context = lines.slice(start, end).map(function(line, i){
+    var curr = i + start + 1;
+    return (curr == lineno ? '  > ' : '    ')
+      + curr
+      + '| '
+      + line;
+  }).join('\n');
+
+  // Alter exception message
+  err.path = filename;
+  err.message = (filename || 'Jade') + ':' + lineno
+    + '\n' + context + '\n\n' + err.message;
+  throw err;
+};
+
+},{"fs":2}],2:[function(_dereq_,module,exports){
+
+},{}]},{},[1])
+(1)
+});
+define('jade',{load: function(id){throw new Error("Dynamic load not allowed: " + id);}});
+
+define('jade!app/text/postbox', function () {  var fn = function template(locals) {
+var buf = [];
+var jade_mixins = {};
+var jade_interp;
+;var locals_for_with = (locals || {});(function (i18n, author, email, website) {
+buf.push("<div class=\"isso-postbox\"><div class=\"form-wrapper\"><div class=\"textarea-wrapper\"><div contenteditable=\"true\" class=\"textarea placeholder\">" + (jade.escape(null == (jade_interp = i18n('postbox-text')) ? "" : jade_interp)) + "</div></div><section class=\"auth-section\"><p class=\"input-wrapper\"><input type=\"text\" name=\"author\"" + (jade.attr("placeholder", i18n('postbox-author'), true, false)) + (jade.attr("value", author !== null ? '' + (author) + '' : '', true, false)) + "/></p><p class=\"input-wrapper\"><input type=\"email\" name=\"email\"" + (jade.attr("placeholder", i18n('postbox-email'), true, false)) + (jade.attr("value", email != null ? '' + (email) + '' : '', true, false)) + "/></p><p class=\"input-wrapper\"><input type=\"text\" name=\"website\"" + (jade.attr("placeholder", i18n('postbox-website'), true, false)) + (jade.attr("value", website != null ? '' + (website) + '' : '', true, false)) + "/></p><p class=\"post-action\"><input type=\"submit\"" + (jade.attr("value", i18n('postbox-submit'), true, false)) + "/></p></section></div></div>");}("i18n" in locals_for_with?locals_for_with.i18n:typeof i18n!=="undefined"?i18n:undefined,"author" in locals_for_with?locals_for_with.author:typeof author!=="undefined"?author:undefined,"email" in locals_for_with?locals_for_with.email:typeof email!=="undefined"?email:undefined,"website" in locals_for_with?locals_for_with.website:typeof website!=="undefined"?website:undefined));;return buf.join("");
+};  return fn;});
+
+
+define('jade!app/text/comment', function () {  var fn = function template(locals) {
+var buf = [];
+var jade_mixins = {};
+var jade_interp;
+;var locals_for_with = (locals || {});(function (comment, conf, bool, i18n, humanize, datetime, svg) {
+buf.push("<div" + (jade.attr("id", 'isso-' + (comment.id) + '', true, false)) + " class=\"isso-comment\">");
+if ( conf.avatar)
+{
+buf.push("<div class=\"avatar\"><svg" + (jade.attr("data-hash", '' + (comment.hash) + '', true, false)) + "></svg></div>");
+}
+buf.push("<div class=\"text-wrapper\"><div role=\"meta\" class=\"isso-comment-header\">");
+if ( bool(comment.website))
+{
+buf.push("<a" + (jade.attr("href", '' + (comment.website) + '', true, false)) + " rel=\"nofollow\" class=\"author\">" + (jade.escape(null == (jade_interp = bool(comment.author) ? comment.author : i18n('comment-anonymous')) ? "" : jade_interp)) + "</a>");
+}
+else
+{
+buf.push("<span class=\"author\">" + (jade.escape(null == (jade_interp = bool(comment.author) ? comment.author : i18n('comment-anonymous')) ? "" : jade_interp)) + "</span>");
+}
+buf.push("<span class=\"spacer\">•</span><a" + (jade.attr("href", '#isso-' + (comment.id) + '', true, false)) + " class=\"permalink\"><time" + (jade.attr("title", '' + (humanize(comment.created)) + '', true, false)) + (jade.attr("datetime", '' + (datetime(comment.created)) + '', true, false)) + "></time></a><span class=\"note\">" + (jade.escape(null == (jade_interp = comment.mode == 2 ? i18n('comment-queued') : comment.mode == 4 ? i18n('comment-deleted') : '') ? "" : jade_interp)) + "</span></div><div class=\"text\">");
+if ( comment.mode == 4)
+{
+buf.push("<p>&nbsp;</p>");
+}
+else
+{
+buf.push(null == (jade_interp = comment.text) ? "" : jade_interp);
+}
+buf.push("</div><div class=\"isso-comment-footer\">");
+if ( conf.vote)
+{
+if ( comment.likes - comment.dislikes != 0)
+{
+buf.push("<span class=\"votes\">" + (jade.escape((jade_interp = comment.likes - comment.dislikes) == null ? '' : jade_interp)) + "</span>");
+}
+buf.push("<a href=\"#\" class=\"upvote\">" + (null == (jade_interp = svg['arrow-up']) ? "" : jade_interp) + "</a><span class=\"spacer\">|</span><a href=\"#\" class=\"downvote\">" + (null == (jade_interp = svg['arrow-down']) ? "" : jade_interp) + "</a>");
+}
+buf.push("<a href=\"#\" class=\"reply\">" + (jade.escape((jade_interp = i18n('comment-reply')) == null ? '' : jade_interp)) + "</a><a href=\"#\" class=\"edit\">" + (jade.escape((jade_interp = i18n('comment-edit')) == null ? '' : jade_interp)) + "</a><a href=\"#\" class=\"delete\">" + (jade.escape((jade_interp = i18n('comment-delete')) == null ? '' : jade_interp)) + "</a></div><div class=\"isso-follow-up\"></div></div></div>");}("comment" in locals_for_with?locals_for_with.comment:typeof comment!=="undefined"?comment:undefined,"conf" in locals_for_with?locals_for_with.conf:typeof conf!=="undefined"?conf:undefined,"bool" in locals_for_with?locals_for_with.bool:typeof bool!=="undefined"?bool:undefined,"i18n" in locals_for_with?locals_for_with.i18n:typeof i18n!=="undefined"?i18n:undefined,"humanize" in locals_for_with?locals_for_with.humanize:typeof humanize!=="undefined"?humanize:undefined,"datetime" in locals_for_with?locals_for_with.datetime:typeof datetime!=="undefined"?datetime:undefined,"svg" in locals_for_with?locals_for_with.svg:typeof svg!=="undefined"?svg:undefined));;return buf.join("");
+};  return fn;});
+
+
+define('jade!app/text/comment-loader', function () {  var fn = function template(locals) {
+var buf = [];
+var jade_mixins = {};
+var jade_interp;
+;var locals_for_with = (locals || {});(function (comment, pluralize) {
+buf.push("<div" + (jade.attr("id", 'isso-loader-' + (comment.name) + '', true, false)) + " class=\"isso-comment-loader\"><a href=\"#\" class=\"load_hidden\">" + (jade.escape((jade_interp = pluralize('comment-hidden', comment.hidden_replies)) == null ? '' : jade_interp)) + "</a></div>");}("comment" in locals_for_with?locals_for_with.comment:typeof comment!=="undefined"?comment:undefined,"pluralize" in locals_for_with?locals_for_with.pluralize:typeof pluralize!=="undefined"?pluralize:undefined));;return buf.join("");
+};  return fn;});
+
+define('app/jade',["libjs-jade-runtime", "app/utils", "jade!app/text/postbox", "jade!app/text/comment", "jade!app/text/comment-loader"], function(runtime, utils, tt_postbox, tt_comment, tt_comment_loader) {
+    
+
+    var globals = {},
+        templates = {};
+
+    var load = function(name, js) {
+        templates[name] = (function(jade) {
+                var fn;
+                eval("fn = " + js);
+                return fn;
+            })(runtime);
+    };
+
+    var set = function(name, value) {
+        globals[name] = value;
+    };
+
+    load("postbox", tt_postbox);
+    load("comment", tt_comment);
+    load("comment-loader", tt_comment_loader);
+
+    set("bool", function(arg) { return arg ? true : false; });
+    set("humanize", function(date) {
+        if (typeof date !== "object") {
+            date = new Date(parseInt(date, 10) * 1000);
+        }
+
+        return date.toString();
+    });
+    set("datetime", function(date) {
+        if (typeof date !== "object") {
+            date = new Date(parseInt(date, 10) * 1000);
+        }
+
+        return [
+            date.getUTCFullYear(),
+            utils.pad(date.getUTCMonth(), 2),
+            utils.pad(date.getUTCDay(), 2)
+        ].join("-") + "T" + [
+            utils.pad(date.getUTCHours(), 2),
+            utils.pad(date.getUTCMinutes(), 2),
+            utils.pad(date.getUTCSeconds(), 2)
+        ].join(":") + "Z";
+    });
+
+    return {
+        "set": set,
+        "render": function(name, locals) {
+            var rv, t = templates[name];
+            if (! t) {
+                throw new Error("Template not found: '" + name + "'");
+            }
+
+            locals = locals || {};
+
+            var keys = [];
+            for (var key in locals) {
+                if (locals.hasOwnProperty(key) && !globals.hasOwnProperty(key)) {
+                    keys.push(key);
+                    globals[key] = locals[key];
+                }
+            }
+
+            rv = templates[name](globals);
+
+            for (var i = 0; i < keys.length; i++) {
+                delete globals[keys[i]];
+            }
+
+            return rv;
+        }
+    };
+});
+define('app/lib/editor',["app/dom", "app/i18n"], function($, i18n) {
+
     
 
     return function(el) {
@@ -2128,7 +1648,7 @@ define('app/lib/editor',["app/dom", "app/markup"], function($, Mark) {
 
         el.on("blur", function() {
             if (el.textContent.length === 0) {
-                el.textContent = Mark.up("{{ i18n-postbox-text }}");
+                el.textContent = i18n.translate("postbox-text");
                 el.classList.add("placeholder");
             }
         });
@@ -2233,597 +1753,28 @@ define('app/lib/identicons',["app/lib/promise", "app/config"], function(Q, confi
     };
 });
 
-/*
- * A JavaScript implementation of the Secure Hash Algorithm, SHA-1, as defined
- * in FIPS 180-1
- * Version 2.2 Copyright Paul Johnston 2000 - 2009.
- * Other contributors: Greg Holt, Andrew Kepert, Ydnar, Lostinet
- * Distributed under the BSD License
- * See http://pajhome.org.uk/crypt/md5 for details.
- */
-
-define('app/lib/sha1',[],function() {
-    /*
-     * Configurable variables. You may need to tweak these to be compatible with
-     * the server-side, but the defaults work in most cases.
-     */
-    var hexcase = 0;  /* hex output format. 0 - lowercase; 1 - uppercase        */
-    var b64pad  = ""; /* base-64 pad character. "=" for strict RFC compliance   */
-
-    /*
-     * These are the functions you'll usually want to call
-     * They take string arguments and return either hex or base-64 encoded strings
-     */
-    function hex_sha1(s)    { return rstr2hex(rstr_sha1(str2rstr_utf8(s))); }
-    function b64_sha1(s)    { return rstr2b64(rstr_sha1(str2rstr_utf8(s))); }
-    function any_sha1(s, e) { return rstr2any(rstr_sha1(str2rstr_utf8(s)), e); }
-    function hex_hmac_sha1(k, d)
-    { return rstr2hex(rstr_hmac_sha1(str2rstr_utf8(k), str2rstr_utf8(d))); }
-    function b64_hmac_sha1(k, d)
-    { return rstr2b64(rstr_hmac_sha1(str2rstr_utf8(k), str2rstr_utf8(d))); }
-    function any_hmac_sha1(k, d, e)
-    { return rstr2any(rstr_hmac_sha1(str2rstr_utf8(k), str2rstr_utf8(d)), e); }
-
-    /*
-     * Perform a simple self-test to see if the VM is working
-     */
-    function sha1_vm_test()
-    {
-        return hex_sha1("abc").toLowerCase() == "a9993e364706816aba3e25717850c26c9cd0d89d";
-    }
-
-    /*
-     * Calculate the SHA1 of a raw string
-     */
-    function rstr_sha1(s)
-    {
-        return binb2rstr(binb_sha1(rstr2binb(s), s.length * 8));
-    }
-
-    /*
-     * Calculate the HMAC-SHA1 of a key and some data (raw strings)
-     */
-    function rstr_hmac_sha1(key, data)
-    {
-        var bkey = rstr2binb(key);
-        if(bkey.length > 16) bkey = binb_sha1(bkey, key.length * 8);
-
-        var ipad = Array(16), opad = Array(16);
-        for(var i = 0; i < 16; i++)
-        {
-            ipad[i] = bkey[i] ^ 0x36363636;
-            opad[i] = bkey[i] ^ 0x5C5C5C5C;
-        }
-
-        var hash = binb_sha1(ipad.concat(rstr2binb(data)), 512 + data.length * 8);
-        return binb2rstr(binb_sha1(opad.concat(hash), 512 + 160));
-    }
-
-    /*
-     * Convert a raw string to a hex string
-     */
-    function rstr2hex(input)
-    {
-        try { hexcase } catch(e) { hexcase=0; }
-        var hex_tab = hexcase ? "0123456789ABCDEF" : "0123456789abcdef";
-        var output = "";
-        var x;
-        for(var i = 0; i < input.length; i++)
-        {
-            x = input.charCodeAt(i);
-            output += hex_tab.charAt((x >>> 4) & 0x0F)
-                +  hex_tab.charAt( x        & 0x0F);
-        }
-        return output;
-    }
-
-    /*
-     * Convert a raw string to a base-64 string
-     */
-    function rstr2b64(input)
-    {
-        try { b64pad } catch(e) { b64pad=''; }
-        var tab = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        var output = "";
-        var len = input.length;
-        for(var i = 0; i < len; i += 3)
-        {
-            var triplet = (input.charCodeAt(i) << 16)
-                | (i + 1 < len ? input.charCodeAt(i+1) << 8 : 0)
-                | (i + 2 < len ? input.charCodeAt(i+2)      : 0);
-            for(var j = 0; j < 4; j++)
-            {
-                if(i * 8 + j * 6 > input.length * 8) output += b64pad;
-                else output += tab.charAt((triplet >>> 6*(3-j)) & 0x3F);
-            }
-        }
-        return output;
-    }
-
-    /*
-     * Convert a raw string to an arbitrary string encoding
-     */
-    function rstr2any(input, encoding)
-    {
-        var divisor = encoding.length;
-        var remainders = Array();
-        var i, q, x, quotient;
-
-        /* Convert to an array of 16-bit big-endian values, forming the dividend */
-        var dividend = Array(Math.ceil(input.length / 2));
-        for(i = 0; i < dividend.length; i++)
-        {
-            dividend[i] = (input.charCodeAt(i * 2) << 8) | input.charCodeAt(i * 2 + 1);
-        }
-
-        /*
-         * Repeatedly perform a long division. The binary array forms the dividend,
-         * the length of the encoding is the divisor. Once computed, the quotient
-         * forms the dividend for the next step. We stop when the dividend is zero.
-         * All remainders are stored for later use.
-         */
-        while(dividend.length > 0)
-        {
-            quotient = Array();
-            x = 0;
-            for(i = 0; i < dividend.length; i++)
-            {
-                x = (x << 16) + dividend[i];
-                q = Math.floor(x / divisor);
-                x -= q * divisor;
-                if(quotient.length > 0 || q > 0)
-                    quotient[quotient.length] = q;
-            }
-            remainders[remainders.length] = x;
-            dividend = quotient;
-        }
-
-        /* Convert the remainders to the output string */
-        var output = "";
-        for(i = remainders.length - 1; i >= 0; i--)
-            output += encoding.charAt(remainders[i]);
-
-        /* Append leading zero equivalents */
-        var full_length = Math.ceil(input.length * 8 /
-            (Math.log(encoding.length) / Math.log(2)))
-        for(i = output.length; i < full_length; i++)
-            output = encoding[0] + output;
-
-        return output;
-    }
-
-    /*
-     * Encode a string as utf-8.
-     * For efficiency, this assumes the input is valid utf-16.
-     */
-    function str2rstr_utf8(input)
-    {
-        var output = "";
-        var i = -1;
-        var x, y;
-
-        while(++i < input.length)
-        {
-            /* Decode utf-16 surrogate pairs */
-            x = input.charCodeAt(i);
-            y = i + 1 < input.length ? input.charCodeAt(i + 1) : 0;
-            if(0xD800 <= x && x <= 0xDBFF && 0xDC00 <= y && y <= 0xDFFF)
-            {
-                x = 0x10000 + ((x & 0x03FF) << 10) + (y & 0x03FF);
-                i++;
-            }
-
-            /* Encode output as utf-8 */
-            if(x <= 0x7F)
-                output += String.fromCharCode(x);
-            else if(x <= 0x7FF)
-                output += String.fromCharCode(0xC0 | ((x >>> 6 ) & 0x1F),
-                    0x80 | ( x         & 0x3F));
-            else if(x <= 0xFFFF)
-                output += String.fromCharCode(0xE0 | ((x >>> 12) & 0x0F),
-                    0x80 | ((x >>> 6 ) & 0x3F),
-                    0x80 | ( x         & 0x3F));
-            else if(x <= 0x1FFFFF)
-                output += String.fromCharCode(0xF0 | ((x >>> 18) & 0x07),
-                    0x80 | ((x >>> 12) & 0x3F),
-                    0x80 | ((x >>> 6 ) & 0x3F),
-                    0x80 | ( x         & 0x3F));
-        }
-        return output;
-    }
-
-    /*
-     * Encode a string as utf-16
-     */
-    function str2rstr_utf16le(input)
-    {
-        var output = "";
-        for(var i = 0; i < input.length; i++)
-            output += String.fromCharCode( input.charCodeAt(i)        & 0xFF,
-                (input.charCodeAt(i) >>> 8) & 0xFF);
-        return output;
-    }
-
-    function str2rstr_utf16be(input)
-    {
-        var output = "";
-        for(var i = 0; i < input.length; i++)
-            output += String.fromCharCode((input.charCodeAt(i) >>> 8) & 0xFF,
-                input.charCodeAt(i)        & 0xFF);
-        return output;
-    }
-
-    /*
-     * Convert a raw string to an array of big-endian words
-     * Characters >255 have their high-byte silently ignored.
-     */
-    function rstr2binb(input)
-    {
-        var output = Array(input.length >> 2);
-        for(var i = 0; i < output.length; i++)
-            output[i] = 0;
-        for(var i = 0; i < input.length * 8; i += 8)
-            output[i>>5] |= (input.charCodeAt(i / 8) & 0xFF) << (24 - i % 32);
-        return output;
-    }
-
-    /*
-     * Convert an array of big-endian words to a string
-     */
-    function binb2rstr(input)
-    {
-        var output = "";
-        for(var i = 0; i < input.length * 32; i += 8)
-            output += String.fromCharCode((input[i>>5] >>> (24 - i % 32)) & 0xFF);
-        return output;
-    }
-
-    /*
-     * Calculate the SHA-1 of an array of big-endian words, and a bit length
-     */
-    function binb_sha1(x, len)
-    {
-        /* append padding */
-        x[len >> 5] |= 0x80 << (24 - len % 32);
-        x[((len + 64 >> 9) << 4) + 15] = len;
-
-        var w = Array(80);
-        var a =  1732584193;
-        var b = -271733879;
-        var c = -1732584194;
-        var d =  271733878;
-        var e = -1009589776;
-
-        for(var i = 0; i < x.length; i += 16)
-        {
-            var olda = a;
-            var oldb = b;
-            var oldc = c;
-            var oldd = d;
-            var olde = e;
-
-            for(var j = 0; j < 80; j++)
-            {
-                if(j < 16) w[j] = x[i + j];
-                else w[j] = bit_rol(w[j-3] ^ w[j-8] ^ w[j-14] ^ w[j-16], 1);
-                var t = safe_add(safe_add(bit_rol(a, 5), sha1_ft(j, b, c, d)),
-                    safe_add(safe_add(e, w[j]), sha1_kt(j)));
-                e = d;
-                d = c;
-                c = bit_rol(b, 30);
-                b = a;
-                a = t;
-            }
-
-            a = safe_add(a, olda);
-            b = safe_add(b, oldb);
-            c = safe_add(c, oldc);
-            d = safe_add(d, oldd);
-            e = safe_add(e, olde);
-        }
-        return Array(a, b, c, d, e);
-
-    }
-
-    /*
-     * Perform the appropriate triplet combination function for the current
-     * iteration
-     */
-    function sha1_ft(t, b, c, d)
-    {
-        if(t < 20) return (b & c) | ((~b) & d);
-        if(t < 40) return b ^ c ^ d;
-        if(t < 60) return (b & c) | (b & d) | (c & d);
-        return b ^ c ^ d;
-    }
-
-    /*
-     * Determine the appropriate additive constant for the current iteration
-     */
-    function sha1_kt(t)
-    {
-        return (t < 20) ?  1518500249 : (t < 40) ?  1859775393 :
-            (t < 60) ? -1894007588 : -899497514;
-    }
-
-    /*
-     * Add integers, wrapping at 2^32. This uses 16-bit operations internally
-     * to work around bugs in some JS interpreters.
-     */
-    function safe_add(x, y)
-    {
-        var lsw = (x & 0xFFFF) + (y & 0xFFFF);
-        var msw = (x >> 16) + (y >> 16) + (lsw >> 16);
-        return (msw << 16) | (lsw & 0xFFFF);
-    }
-
-    /*
-     * Bitwise rotate a 32-bit number to the left.
-     */
-    function bit_rol(num, cnt)
-    {
-        return (num << cnt) | (num >>> (32 - cnt));
-    }
-
-    return {
-        rstr2hex: rstr2hex, binb2rstr: binb2rstr,
-        binb_sha1: binb_sha1, rstr2binb: rstr2binb
-    }
-})
-;
-define('app/lib/pbkdf2',["app/lib/promise", "app/lib/sha1"], function(Q, sha1) {
-    /*
-     * JavaScript implementation of Password-Based Key Derivation Function 2
-     * (PBKDF2) as defined in RFC 2898.
-     * Version 1.5
-     * Copyright (c) 2007, 2008, 2009, 2010, 2011, 2012, 2013 Parvez Anandam
-     * parvez@anandam.com
-     * http://anandam.com/pbkdf2
-     *
-     * Distributed under the BSD license
-     *
-     * Uses Paul Johnston's excellent SHA-1 JavaScript library sha1.js:
-     * http://pajhome.org.uk/crypt/md5/sha1.html
-     * (uses the binb_sha1(), rstr2binb(), binb2str(), rstr2hex() functions from that libary)
-     *
-     * Thanks to Felix Gartsman for pointing out a bug in version 1.0
-     * Thanks to Thijs Van der Schaeghe for pointing out a bug in version 1.1
-     * Thanks to Richard Gautier for asking to clarify dependencies in version 1.2
-     * Updated contact information from version 1.3
-     * Thanks to Stuart Heinrich for pointing out updates to PAJ's SHA-1 library in version 1.4
-     */
-
-
-    /*
-     * The four arguments to the constructor of the PBKDF2 object are
-     * the password, salt, number of iterations and number of bytes in
-     * generated key. This follows the RFC 2898 definition: PBKDF2 (P, S, c, dkLen)
-     *
-     * The method deriveKey takes two parameters, both callback functions:
-     * the first is used to provide status on the computation, the second
-     * is called with the result of the computation (the generated key in hex).
-     *
-     * Example of use:
-     *
-     *    <script src="sha1.js"></script>
-     *    <script src="pbkdf2.js"></script>
-     *    <script>
-     *    var mypbkdf2 = new PBKDF2("mypassword", "saltines", 1000, 16);
-     *    var status_callback = function(percent_done) {
-     *        document.getElementById("status").innerHTML = "Computed " + percent_done + "%"};
-     *    var result_callback = function(key) {
-     *        document.getElementById("status").innerHTML = "The derived key is: " + key};
-     *    mypbkdf2.deriveKey(status_callback, result_callback);
-     *    </script>
-     *    <div id="status"></div>
-     *
-     */
-
-    var PBKDF2 = function(password, salt, num_iterations, num_bytes)
-    {
-        // Remember the password and salt
-        var m_bpassword = sha1.rstr2binb(password);
-        var m_salt = salt;
-
-        // Total number of iterations
-        var m_total_iterations = num_iterations;
-
-        // Run iterations in chunks instead of all at once, so as to not block.
-        // Define size of chunk here; adjust for slower or faster machines if necessary.
-        var m_iterations_in_chunk = 10;
-
-        // Iteration counter
-        var m_iterations_done = 0;
-
-        // Key length, as number of bytes
-        var m_key_length = num_bytes;
-
-        // The hash cache
-        var m_hash = null;
-
-        // The length (number of bytes) of the output of the pseudo-random function.
-        // Since HMAC-SHA1 is the standard, and what is used here, it's 20 bytes.
-        var m_hash_length = 20;
-
-        // Number of hash-sized blocks in the derived key (called 'l' in RFC2898)
-        var m_total_blocks = Math.ceil(m_key_length/m_hash_length);
-
-        // Start computation with the first block
-        var m_current_block = 1;
-
-        // Used in the HMAC-SHA1 computations
-        var m_ipad = new Array(16);
-        var m_opad = new Array(16);
-
-        // This is where the result of the iterations gets sotred
-        var m_buffer = new Array(0x0,0x0,0x0,0x0,0x0);
-
-        // The result
-        var m_key = "";
-
-        // This object
-        var m_this_object = this;
-
-        // The function to call with the result
-        var m_result_func;
-
-        // The function to call with status after computing every chunk
-        var m_status_func;
-
-        // Set up the HMAC-SHA1 computations
-        if (m_bpassword.length > 16) m_bpassword = sha1.binb_sha1(m_bpassword, password.length * chrsz);
-        for(var i = 0; i < 16; ++i)
-        {
-            m_ipad[i] = m_bpassword[i] ^ 0x36363636;
-            m_opad[i] = m_bpassword[i] ^ 0x5C5C5C5C;
-        }
-
-
-        // Starts the computation
-        this.deriveKey = function(status_callback, result_callback)
-        {
-            m_status_func = status_callback;
-            m_result_func = result_callback;
-            setTimeout(function() { m_this_object.do_PBKDF2_iterations() }, 0);
-        }
-
-
-        // The workhorse
-        this.do_PBKDF2_iterations = function()
-        {
-            var iterations = m_iterations_in_chunk;
-            if (m_total_iterations - m_iterations_done < m_iterations_in_chunk)
-                iterations = m_total_iterations - m_iterations_done;
-
-            for(var i=0; i<iterations; ++i)
-            {
-                // compute HMAC-SHA1
-                if (m_iterations_done == 0)
-                {
-                    var salt_block = m_salt +
-                        String.fromCharCode(m_current_block >> 24 & 0xF) +
-                        String.fromCharCode(m_current_block >> 16 & 0xF) +
-                        String.fromCharCode(m_current_block >>  8 & 0xF) +
-                        String.fromCharCode(m_current_block       & 0xF);
-
-                    m_hash = sha1.binb_sha1(m_ipad.concat(sha1.rstr2binb(salt_block)),
-                        512 + salt_block.length * 8);
-                    m_hash = sha1.binb_sha1(m_opad.concat(m_hash), 512 + 160);
-                }
-                else
-                {
-                    m_hash = sha1.binb_sha1(m_ipad.concat(m_hash),
-                        512 + m_hash.length * 32);
-                    m_hash = sha1.binb_sha1(m_opad.concat(m_hash), 512 + 160);
-                }
-
-                for(var j=0; j<m_hash.length; ++j)
-                    m_buffer[j] ^= m_hash[j];
-
-                m_iterations_done++;
-            }
-
-            // Call the status callback function
-            m_status_func( (m_current_block - 1 + m_iterations_done/m_total_iterations) / m_total_blocks * 100);
-
-            if (m_iterations_done < m_total_iterations)
-            {
-                setTimeout(function() { m_this_object.do_PBKDF2_iterations() }, 0);
-            }
-            else
-            {
-                if (m_current_block < m_total_blocks)
-                {
-                    // Compute the next block (T_i in RFC 2898)
-
-                    m_key += sha1.rstr2hex(sha1.binb2rstr(m_buffer));
-
-                    m_current_block++;
-                    m_buffer = new Array(0x0,0x0,0x0,0x0,0x0);
-                    m_iterations_done = 0;
-
-                    setTimeout(function() { m_this_object.do_PBKDF2_iterations() }, 0);
-                }
-                else
-                {
-                    // We've computed the final block T_l; we're done.
-
-                    var tmp = sha1.rstr2hex(sha1.binb2rstr(m_buffer));
-                    m_key += tmp.substr(0, (m_key_length - (m_total_blocks - 1) * m_hash_length) * 2 );
-
-                    // Call the result callback function
-                    m_result_func(m_key);
-                }
-            }
-        }
-    }
-
-    return function(text, salt, iterations, size) {
-
-        var deferred = Q.defer();
-
-        Q.when(text, function(text) {
-            var pbkdf2 = new PBKDF2(text, salt, iterations, size);
-            pbkdf2.deriveKey(function() {}, function(rv) {
-                deferred.resolve(rv);
-            });
-        });
-
-        return deferred.promise;
-    }
-})
-;
-define('app/lib',['require','app/lib/editor','app/lib/identicons','app/lib/pbkdf2','app/lib/sha1'],function (require) {
+define('app/lib',['require','app/lib/editor','app/lib/identicons'],function (require) {
     return {
         editorify: require("app/lib/editor"),
-        identicons: require("app/lib/identicons"),
-        pbkdf2: require("app/lib/pbkdf2"),
-        sha1: require("app/lib/sha1")
+        identicons: require("app/lib/identicons")
     };
 });
 
 /* Isso – Ich schrei sonst!
  */
-define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/api", "app/markup", "app/i18n", "app/lib", "app/globals"],
-    function(templates, $, utils, config, api, Mark, i18n, lib, globals) {
+define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", "app/i18n", "app/lib", "app/globals"],
+    function($, utils, config, api, jade, i18n, lib, globals) {
 
     
 
-    var msgs = i18n[i18n.lang];
-
     var Postbox = function(parent) {
 
-        var el = $.htmlify(Mark.up(templates["postbox"]));
-
-        // add a default identicon to not waste CPU cycles
-        $(".avatar > svg", el).replace(lib.identicons.blank(4, 48));
-
-        // on text area focus, generate identicon from IP address
-        $(".textarea-wrapper > .textarea", el).on("focus", function() {
-            if ($(".avatar svg", el).getAttribute("className") === "blank") {
-                $(".avatar svg", el).replace(
-                    lib.identicons.generate(lib.pbkdf2(api.remote_addr(), api.salt, 1000, 6), 4, 48));
-            }
-        });
-
-        // update identicon on email input. Listens on keyup, after 200ms the
-        // new identicon is generated.
-        var active;
-        $(".input-wrapper > [type=email]", el).on("keyup", function() {
-            if (active) {
-                clearTimeout(active);
-            }
-            active = setTimeout(function() {
-                lib.pbkdf2($(".input-wrapper > [type=email]", el).value || api.remote_addr(), api.salt, 1000, 6)
-                .then(function(rv) {
-                    $(".avatar svg", el).replace(lib.identicons.generate(rv, 4, 48));
-                });
-            }, 200);
-        }, false);
-
-        $(".input-wrapper > [type=email]", el).on("keydown", function() {
-            clearTimeout(active);
-        }, false);
+        var localStorage = utils.localStorageImpl,
+            el = $.htmlify(jade.render("postbox", {
+            "author":  JSON.parse(localStorage.getItem("author")),
+            "email":   JSON.parse(localStorage.getItem("email")),
+            "website": JSON.parse(localStorage.getItem("website"))
+        }));
 
         // callback on success (e.g. to toggle the reply button)
         el.onsuccess = function() {};
@@ -2845,21 +1796,25 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                 return;
             }
 
+            var author = $("[name=author]", el).value || null,
+                email = $("[name=email]", el).value || null,
+                website = $("[name=website]", el).value || null;
+
+            localStorage.setItem("author", JSON.stringify(author));
+            localStorage.setItem("email", JSON.stringify(email));
+            localStorage.setItem("website", JSON.stringify(website));
+
             api.create($("#isso-thread").getAttribute("data-isso-id"), {
-                author: $("[name=author]", el).value || null,
-                email: $("[name=email]", el).value || null,
+                author: author, email: email, website: website,
                 text: utils.text($(".textarea", el).innerHTML),
                 parent: parent || null
             }).then(function(comment) {
-                $("[name=author]", el).value = "";
-                $("[name=email]", el).value = "";
                 $(".textarea", el).innerHTML = "";
                 $(".textarea", el).blur();
                 insert(comment, true);
 
                 if (parent !== null) {
                     el.onsuccess();
-                    el.remove();
                 }
             });
         });
@@ -2869,21 +1824,54 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         return el;
     };
 
-    // lookup table for responses (to link to the parent)
-    var map  = {id: {}, name: {}};
+    var insert_loader = function(comment, lastcreated) {
+        var entrypoint;
+        if (comment.id === null) {
+            entrypoint = $("#isso-root");
+            comment.name = 'null';
+        } else {
+            entrypoint = $("#isso-" + comment.id + " > .text-wrapper > .isso-follow-up");
+            comment.name = comment.id;
+        }
+        var el = $.htmlify(jade.render("comment-loader", {"comment": comment}));
+
+        entrypoint.append(el);
+
+        $("a.load_hidden", el).on("click", function() {
+            el.remove();
+            api.fetch($("#isso-thread").getAttribute("data-isso-id"),
+                config["reveal-on-click"], config["max-comments-nested"],
+                comment.id,
+                lastcreated).then(
+                function(rv) {
+                    if (rv.total_replies === 0) {
+                        return;
+                    }
+
+                    var lastcreated = 0;
+                    rv.replies.forEach(function(commentObject) {
+                        insert(commentObject, false);
+                        if(commentObject.created > lastcreated) {
+                            lastcreated = commentObject.created;
+                        }
+                    });
+
+                    if(rv.hidden_replies > 0) {
+                        insert_loader(rv, lastcreated);
+                    }
+                },
+                function(err) {
+                    console.log(err);
+                });
+        });
+    };
 
     var insert = function(comment, scrollIntoView) {
-
-        map.name[comment.id] = comment.author;
-        if (comment.parent) {
-            comment["replyto"] = map.name[comment.parent];
-        }
-
-        var el = $.htmlify(Mark.up(templates["comment"], comment));
+        var el = $.htmlify(jade.render("comment", {"comment": comment}));
 
         // update datetime every 60 seconds
         var refresh = function() {
-            $(".permalink > date", el).textContent = utils.ago(
+            $(".permalink > time", el).textContent = utils.ago(
                 globals.offset.localTime(), new Date(parseInt(comment.created, 10) * 1000));
             setTimeout(refresh, 60*1000);
         };
@@ -2891,18 +1879,15 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         // run once to activate
         refresh();
 
-        $("div.avatar > svg", el).replace(lib.identicons.generate(comment.hash, 4, 48));
+        if (config["avatar"]) {
+            $("div.avatar > svg", el).replace(lib.identicons.generate(comment.hash, 4, 48));
+        }
 
         var entrypoint;
         if (comment.parent === null) {
             entrypoint = $("#isso-root");
         } else {
-            var key = comment.parent;
-            while (key in map.id) {
-                key = map.id[key];
-            }
-            map.id[comment.id] = comment.parent;
-            entrypoint = $("#isso-" + key + " > .text-wrapper > .isso-follow-up");
+            entrypoint = $("#isso-" + comment.parent + " > .text-wrapper > .isso-follow-up");
         }
 
         entrypoint.append(el);
@@ -2918,58 +1903,52 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         var form = null;  // XXX: probably a good place for a closure
         $("a.reply", footer).toggle("click",
             function(toggler) {
-                form = footer.insertAfter(new Postbox(comment.id));
+                form = footer.insertAfter(new Postbox(comment.parent === null ? comment.id : comment.parent));
                 form.onsuccess = function() { toggler.next(); };
                 $(".textarea", form).focus();
-                $("a.reply", footer).textContent = msgs["comment-close"];
+                $("a.reply", footer).textContent = i18n.translate("comment-close");
             },
             function() {
                 form.remove();
-                $("a.reply", footer).textContent = msgs["comment-reply"];
+                $("a.reply", footer).textContent = i18n.translate("comment-reply");
             }
         );
 
-        if (comment.parent !== null) {
-            $("a.parent", header).on("mouseover", function() {
-                $("#isso-" + comment.parent).classList.add("parent-highlight");
+        if (config.vote) {
+            // update vote counter, but hide if votes sum to 0
+            var votes = function (value) {
+                var span = $("span.votes", footer);
+                if (span === null && value !== 0) {
+                    footer.prepend($.new("span.votes", value));
+                } else {
+                    if (value === 0) {
+                        span.remove();
+                    } else {
+                        span.textContent = value;
+                    }
+                }
+            };
+
+            $("a.upvote", footer).on("click", function () {
+                api.like(comment.id).then(function (rv) {
+                    votes(rv.likes - rv.dislikes);
+                });
             });
-            $("a.parent", header).on("mouseout", function() {
-                $("#isso-" + comment.parent).classList.remove("parent-highlight");
+
+            $("a.downvote", footer).on("click", function () {
+                api.dislike(comment.id).then(function (rv) {
+                    votes(rv.likes - rv.dislikes);
+                });
             });
         }
-
-        // update vote counter, but hide if votes sum to 0
-        var votes = function(value) {
-            var span = $("span.votes", footer);
-            if (span === null && value !== 0) {
-                footer.prepend($.new("span.votes", value));
-            } else {
-                if (value === 0) {
-                    span.remove();
-                } else {
-                    span.textContent = value;
-                }
-            }
-        };
-
-        $("a.upvote", footer).on("click", function() {
-            api.like(comment.id).then(function(rv) {
-                votes(rv.likes - rv.dislikes);
-            });
-        });
-
-        $("a.downvote", footer).on("click", function() {
-            api.dislike(comment.id).then(function(rv) {
-                votes(rv.likes - rv.dislikes);
-            });
-        });
 
         $("a.edit", footer).toggle("click",
             function(toggler) {
                 var edit = $("a.edit", footer);
+                var avatar = config["avatar"] ? $(".avatar", el, false)[0] : null;
 
-                edit.textContent = msgs["comment-save"];
-                edit.insertAfter($.new("a.cancel", msgs["comment-cancel"])).on("click", function() {
+                edit.textContent = i18n.translate("comment-save");
+                edit.insertAfter($.new("a.cancel", i18n.translate("comment-cancel"))).on("click", function() {
                     toggler.canceled = true;
                     toggler.next();
                 });
@@ -2987,9 +1966,14 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                     text.textContent = "";
                     text.append(textarea);
                 });
+
+                if (avatar !== null) {
+                    avatar.hide();
+                }
             },
             function(toggler) {
                 var textarea = $(".textarea", text);
+                var avatar = config["avatar"] ? $(".avatar", el, false)[0] : null;
 
                 if (! toggler.canceled && textarea !== null) {
                     if (utils.text(textarea.innerHTML).length < 3) {
@@ -3009,8 +1993,12 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                 text.classList.remove("textarea-wrapper");
                 text.classList.add("text");
 
+                if (avatar !== null) {
+                    avatar.show();
+                }
+
                 $("a.cancel", footer).remove();
-                $("a.edit", footer).textContent = msgs["comment-edit"];
+                $("a.edit", footer).textContent = i18n.translate("comment-edit");
             }
         );
 
@@ -3019,9 +2007,9 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                 var del = $("a.delete", footer);
                 var state = ! toggler.state;
 
-                del.textContent = msgs["comment-confirm"];
+                del.textContent = i18n.translate("comment-confirm");
                 del.on("mouseout", function() {
-                    del.textContent = msgs["comment-delete"];
+                    del.textContent = i18n.translate("comment-delete");
                     toggler.state = state;
                     del.onmouseout = null;
                 });
@@ -3032,12 +2020,12 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
                     if (rv) {
                         el.remove();
                     } else {
-                        $("span.note", header).textContent = msgs["comment-deleted"];
+                        $("span.note", header).textContent = i18n.translate("comment-deleted");
                         text.innerHTML = "<p>&nbsp;</p>";
                         $("a.edit", footer).remove();
                         $("a.delete", footer).remove();
                     }
-                    del.textContent = msgs["comment-delete"];
+                    del.textContent = i18n.translate("comment-delete");
                 });
             }
         );
@@ -3068,26 +2056,43 @@ define('app/isso',["app/text/html", "app/dom", "app/utils", "app/config", "app/a
         if (! config["reply-to-self"] && utils.cookie("isso-" + comment.id)) {
             show($("a.reply", footer).detach());
         }
+
+        if(comment.hasOwnProperty('replies')) {
+            var lastcreated = 0;
+            comment.replies.forEach(function(replyObject) {
+                insert(replyObject, false);
+                if(replyObject.created > lastcreated) {
+                    lastcreated = replyObject.created;
+                }
+
+            });
+            if(comment.hidden_replies > 0) {
+                insert_loader(comment, lastcreated);
+            }
+
+        }
+
     };
 
     return {
         insert: insert,
+        insert_loader: insert_loader,
         Postbox: Postbox
     };
 });
 
-define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) {
+define('app/count',["app/api", "app/dom", "app/i18n"], function(api, $, i18n) {
     return function() {
 
         var objs = {};
 
         $.each("a", function(el) {
-            if (! el.href.match("#isso-thread$")) {
+            if (! el.href.match(/#isso-thread$/)) {
                 return;
             }
 
             var tid = el.getAttribute("data-isso-id") ||
-                      el.href.match("^(.+)#isso-thread$")[1]
+                      el.href.match(/^(.+)#isso-thread$/)[1]
                              .replace(/^.*\/\/[^\/]+/, '');
 
             if (tid in objs) {
@@ -3106,9 +2111,7 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                     var index = urls.indexOf(key);
 
                     for (var i = 0; i < objs[key].length; i++) {
-                        objs[key][i].textContent = Mark.up(
-                            "{{ i18n-num-comments | pluralize : `n` }}",
-                            {n: rv[index]});
+                        objs[key][i].textContent = i18n.pluralize("num-comments", rv[index]);
                     }
                 }
             }
@@ -3116,7 +2119,9 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
     };
 });
 
-define('text!app/../../css/isso.css',[],function () { return '* {\n  -webkit-box-sizing: border-box;\n  -moz-box-sizing: border-box;\n  box-sizing: border-box; }\n\na {\n  text-decoration: none; }\n\n#isso-thread {\n  padding: 0;\n  margin: 0; }\n  #isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n    font-family: "Helvetica", Arial, sans-serif; }\n  #isso-thread .textarea {\n    min-height: 48px;\n    outline: 0px solid transparent; }\n  #isso-thread .textarea.placeholder {\n    color: #AAA; }\n\n.parent-highlight {\n  background-color: #EFEFEF; }\n\n.isso-comment {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto;\n  margin: 0.95em 0px; }\n  .isso-comment:before, .isso-comment:after {\n    content: " ";\n    display: table; }\n  .isso-comment:after {\n    clear: both; }\n  .isso-comment > div.avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .isso-comment > div.avatar:last-child {\n      margin-right: 0; }\n    .isso-comment > div.avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .isso-comment > div.text-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .isso-comment > div.text-wrapper:last-child {\n      margin-right: 0; }\n    .isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-size: 0.95em; }\n    .isso-comment > div.text-wrapper > .isso-comment-header {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.85em; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n        padding-left: 6px;\n        padding-right: 6px; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .spacer, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink, .isso-comment > div.text-wrapper > .isso-comment-header .note, .isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n        color: gray !important;\n        font-weight: normal;\n        text-shadow: none !important; }\n        .isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover, .isso-comment > div.text-wrapper > .isso-comment-header .note:hover, .isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n          color: #606060 !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .note {\n        float: right; }\n      .isso-comment > div.text-wrapper > .isso-comment-header .author {\n        font-weight: bold;\n        color: #555; }\n    .isso-comment > div.text-wrapper > .textarea-wrapper .textarea {\n      margin-top: 0.2em; }\n    .isso-comment > div.text-wrapper > div.text p {\n      margin-top: 0.2em; }\n      .isso-comment > div.text-wrapper > div.text p:last-child {\n        margin-bottom: 0.2em; }\n    .isso-comment > div.text-wrapper > div.text h1, .isso-comment > div.text-wrapper > div.text h2, .isso-comment > div.text-wrapper > div.text h3, .isso-comment > div.text-wrapper > div.text h4, .isso-comment > div.text-wrapper > div.text h5, .isso-comment > div.text-wrapper > div.text h6 {\n      font-size: 100%; }\n    .isso-comment > div.text-wrapper > div.textarea-wrapper .textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888; }\n    .isso-comment > div.text-wrapper > .isso-comment-footer {\n      font-family: "Helvetica", Arial, sans-serif;\n      font-size: 0.80em;\n      color: gray !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a {\n        font-weight: bold;\n        text-decoration: none; }\n        .isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n          color: #111111 !important;\n          text-shadow: #aaaaaa 0px 0px 1px !important; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer a.reply, .isso-comment > div.text-wrapper > .isso-comment-footer a.edit, .isso-comment > div.text-wrapper > .isso-comment-footer a.cancel, .isso-comment > div.text-wrapper > .isso-comment-footer a.delete {\n        padding-left: 1em; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n        color: gray; }\n      .isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg, .isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n        position: relative;\n        top: 0.2em; }\n  .isso-comment .postbox {\n    margin-top: 0.8em; }\n\n.postbox {\n  *zoom: 1;\n  max-width: 68em;\n  margin-left: auto;\n  margin-right: auto; }\n  .postbox:before, .postbox:after {\n    content: " ";\n    display: table; }\n  .postbox:after {\n    clear: both; }\n  .postbox > .avatar {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 6.74772%; }\n    .postbox > .avatar:last-child {\n      margin-right: 0; }\n    .postbox > .avatar > svg {\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888;\n      max-height: 48px; }\n  .postbox > .form-wrapper {\n    display: block;\n    float: left;\n    margin-right: 2.57751%;\n    width: 90.67477%; }\n    .postbox > .form-wrapper:last-child {\n      margin-right: 0; }\n    .postbox > .form-wrapper .textarea {\n      width: 100%;\n      border: 1px solid #f0f0f0;\n      border-radius: 2px;\n      box-shadow: 0px 0px 2px #888; }\n    .postbox > .form-wrapper > .textarea-wrapper {\n      margin-bottom: 0.2em; }\n    .postbox > .form-wrapper > .auth-section {\n      *zoom: 1;\n      max-width: 68em;\n      margin-left: auto;\n      margin-right: auto; }\n      .postbox > .form-wrapper > .auth-section:before, .postbox > .form-wrapper > .auth-section:after {\n        content: " ";\n        display: table; }\n      .postbox > .form-wrapper > .auth-section:after {\n        clear: both; }\n      .postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 36.4891%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .input-wrapper input {\n          width: 100%;\n          border: 1px solid #f0f0f0;\n          border-radius: 2px;\n          box-shadow: 0px 0px 2px #888;\n          padding: 0.2em;\n          font: inherit; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-webkit-input-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input::-moz-placeholder {\n            color: #AAA; }\n          .postbox > .form-wrapper > .auth-section .input-wrapper input:-ms-input-placeholder {\n            color: #AAA; }\n      .postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: left;\n        margin-right: 5.85151%;\n        width: 15.3188%;\n        margin-top: 0.1em; }\n        .postbox > .form-wrapper > .auth-section .post-action:last-child {\n          margin-right: 0; }\n        .postbox > .form-wrapper > .auth-section .post-action > input {\n          width: 100%;\n          padding: 0.4em 1em;\n          border-radius: 2px;\n          border: #CCC solid 1px;\n          background-color: #DDD;\n          cursor: pointer; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:hover {\n            background-color: #CCC; }\n          .postbox > .form-wrapper > .auth-section .post-action > input:active {\n            background-color: #BBB; }\n';});
+define('text',{load: function(id){throw new Error("Dynamic load not allowed: " + id);}});
+
+define('text!app/../../css/isso.css',[],function () { return '#isso-thread * {\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n}\n#isso-thread a {\n    text-decoration: none;\n}\n\n#isso-thread {\n    padding: 0;\n    margin: 0;\n}\n#isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n}\n#isso-thread .textarea {\n    min-height: 58px;\n    outline: 0;\n}\n#isso-thread .textarea.placeholder {\n    color: #AAA;\n}\n\n.isso-comment {\n    max-width: 68em;\n    padding-top: 0.95em;\n    margin: 0.95em auto;\n}\n.isso-comment:not(:first-of-type),\n.isso-follow-up .isso-comment {\n    border-top: 1px solid rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.avatar,\n.isso-postbox > .avatar {\n    display: block;\n    float: left;\n    width: 7%;\n    margin: 3px 15px 0 0;\n}\n.isso-postbox > .avatar {\n    float: left;\n    margin: 5px 10px 0 5px;\n    width: 48px;\n    height: 48px;\n    overflow: hidden;\n}\n.isso-comment > div.avatar > svg,\n.isso-postbox > .avatar > svg {\n    max-width: 48px;\n    max-height: 48px;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 3px;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.text-wrapper {\n    display: block;\n}\n.isso-comment .isso-follow-up {\n    padding-left: calc(7% + 20px);\n}\n.isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.95em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header {\n    font-size: 0.85em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n    padding: 0 6px;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink,\n.isso-comment > div.text-wrapper > .isso-comment-header .note,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n    color: gray !important;\n    font-weight: normal;\n    text-shadow: none !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header .note:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n    color: #606060 !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .note {\n    float: right;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .author {\n    font-weight: bold;\n    color: #555;\n}\n.isso-comment > div.text-wrapper > .textarea-wrapper .textarea {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p:last-child {\n    margin-bottom: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text h1,\n.isso-comment > div.text-wrapper > div.text h2,\n.isso-comment > div.text-wrapper > div.text h3,\n.isso-comment > div.text-wrapper > div.text h4,\n.isso-comment > div.text-wrapper > div.text h5,\n.isso-comment > div.text-wrapper > div.text h6 {\n    font-size: 130%;\n    font-weight: bold;\n}\n.isso-comment > div.text-wrapper > div.textarea-wrapper .textarea {\n    width: 100%;\n    border: 1px solid #f0f0f0;\n    border-radius: 2px;\n    box-shadow: 0 0 2px #888;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.80em;\n    color: gray !important;\n    clear: left;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a {\n    font-weight: bold;\n    text-decoration: none;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n    color: #111111 !important;\n    text-shadow: #aaaaaa 0 0 1px !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a {\n    position: relative;\n    top: .2em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a + a {\n    padding-left: 1em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n    color: gray;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg,\n.isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n    position: relative;\n    top: .2em;\n}\n.isso-comment .isso-postbox {\n    margin-top: 0.8em;\n}\n\n.isso-postbox {\n    max-width: 68em;\n    margin: 0 auto 2em;\n}\n.isso-postbox > .form-wrapper {\n    display: block;\n    padding: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section,\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: block;\n}\n.isso-postbox > .form-wrapper .textarea {\n    margin: 0 0 .3em;\n    padding: .4em .8em;\n    border-radius: 3px;\n    background-color: #fff;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n#isso-thread .textarea:focus,\n#isso-thread input:focus {\n    border-color: rgba(0, 0, 0, 0.8);\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n    display: inline-block;\n    position: relative;\n    max-width: 25%;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n    padding: .3em 10px;\n    max-width: 100%;\n    border-radius: 3px;\n    background-color: #fff;\n    line-height: 1.4em;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: inline-block;\n    float: right;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input {\n    padding: calc(.3em - 1px);\n    border-radius: 2px;\n    border: 1px solid #CCC;\n    background-color: #DDD;\n    cursor: pointer;\n    outline: 0;\n    line-height: 1.4em;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:hover {\n    background-color: #CCC;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:active {\n    background-color: #BBB;\n}\n@media screen and (max-width:600px) {\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        max-width: 100%;\n        margin: 0 0 .3em;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n        width: 100%;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: none;\n        text-align: right;\n    }\n}\n';});
 
 define('app/text/css',["text!../../../css/isso.css"], function(isso) {
     return {
@@ -3124,14 +2129,32 @@ define('app/text/css',["text!../../../css/isso.css"], function(isso) {
     };
 });
 
+
+define('text!app/text/arrow-down.svg',[],function () { return '<!-- Generator: IcoMoon.io --><svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="gray">\n  <g>\n    <path d="M 24.773,13.701c-0.651,0.669-7.512,7.205-7.512,7.205C 16.912,21.262, 16.456,21.44, 16,21.44c-0.458,0-0.914-0.178-1.261-0.534 c0,0-6.861-6.536-7.514-7.205c-0.651-0.669-0.696-1.87,0-2.586c 0.698-0.714, 1.669-0.77, 2.522,0L 16,17.112l 6.251-5.995 c 0.854-0.77, 1.827-0.714, 2.522,0C 25.47,11.83, 25.427,13.034, 24.773,13.701z">\n    </path>\n  </g>\n</svg>\n';});
+
+
+define('text!app/text/arrow-up.svg',[],function () { return '<!-- Generator: IcoMoon.io --><svg width="16" height="16" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" fill="gray">\n  <g>\n    <path d="M 24.773,18.299c-0.651-0.669-7.512-7.203-7.512-7.203C 16.912,10.739, 16.456,10.56, 16,10.56c-0.458,0-0.914,0.179-1.261,0.536 c0,0-6.861,6.534-7.514,7.203c-0.651,0.669-0.696,1.872,0,2.586c 0.698,0.712, 1.669,0.77, 2.522,0L 16,14.89l 6.251,5.995 c 0.854,0.77, 1.827,0.712, 2.522,0C 25.47,20.17, 25.427,18.966, 24.773,18.299z">\n    </path>\n  </g>\n</svg>\n';});
+
+define('app/text/svg',["text!./arrow-down.svg", "text!./arrow-up.svg"], function (arrdown, arrup) {
+    return {
+        "arrow-down": arrdown,
+        "arrow-up": arrup
+    };
+});
+
 /*
- * Copyright 2013, Martin Zimmermann <info@posativ.org>. All rights reserved.
+ * Copyright 2014, Martin Zimmermann <info@posativ.org>. All rights reserved.
  * Distributed under the MIT license
  */
 
-require(["app/lib/ready", "app/config", "app/api", "app/isso", "app/count", "app/dom", "app/markup", "app/text/css"], function(domready, config, api, isso, count, $, Mark, css) {
+require(["app/lib/ready", "app/config", "app/i18n", "app/api", "app/isso", "app/count", "app/dom", "app/text/css", "app/text/svg", "app/jade"], function(domready, config, i18n, api, isso, count, $, css, svg, jade) {
 
     
+
+    jade.set("conf", config);
+    jade.set("i18n", i18n.translate);
+    jade.set("pluralize", i18n.pluralize);
+    jade.set("svg", svg);
 
     domready(function() {
 
@@ -3152,16 +2175,28 @@ require(["app/lib/ready", "app/config", "app/api", "app/isso", "app/count", "app
         $("#isso-thread").append(new isso.Postbox(null));
         $("#isso-thread").append('<div id="isso-root"></div>');
 
-        api.fetch($("#isso-thread").getAttribute("data-isso-id")).then(
+        api.fetch($("#isso-thread").getAttribute("data-isso-id"),
+            config["max-comments-top"],
+            config["max-comments-nested"]).then(
             function(rv) {
-                if (! rv.length) {
-                    $("#isso-thread > h4").textContent = Mark.up("{{ i18n-no-comments }}");
+                if (rv.total_replies === 0) {
+                    $("#isso-thread > h4").textContent = i18n.translate("no-comments");
                     return;
                 }
 
-                $("#isso-thread > h4").textContent = Mark.up("{{ i18n-num-comments | pluralize : `n` }}", {n: rv.length});
-                for (var i=0; i < rv.length; i++) {
-                    isso.insert(rv[i], false);
+                var lastcreated = 0;
+                var count = rv.total_replies;
+                rv.replies.forEach(function(comment) {
+                    isso.insert(comment, false);
+                    if(comment.created > lastcreated) {
+                        lastcreated = comment.created;
+                    }
+                    count = count + comment.total_replies;
+                });
+                $("#isso-thread > h4").textContent = i18n.pluralize("num-comments", count);
+
+                if(rv.hidden_replies > 0) {
+                    isso.insert_loader(rv, lastcreated);
                 }
 
                 if (window.location.hash.length > 0) {
@@ -3176,4 +2211,5 @@ require(["app/lib/ready", "app/config", "app/api", "app/isso", "app/count", "app
 });
 
 define("embed", function(){});
+
 }());

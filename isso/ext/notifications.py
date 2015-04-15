@@ -47,7 +47,7 @@ class SMTP(object):
         if uwsgi:
             def spooler(args):
                 try:
-                    self._sendmail(args["subject"].decode("utf-8"),
+                    self._sendmail(args[b"subject"].decode("utf-8"),
                                    args["body"].decode("utf-8"))
                 except smtplib.SMTPConnectError:
                     return uwsgi.SPOOL_RETRY
@@ -63,11 +63,16 @@ class SMTP(object):
                             timeout=self.conf.getint('timeout'))
 
         if self.conf.get('security') == 'starttls':
-            self.client.starttls();
+            self.client.starttls()
 
-        if self.conf.get('username') and self.conf.get('password'):
-            self.client.login(self.conf.get('username'),
-                              self.conf.get('password'))
+        username = self.conf.get('username')
+        password = self.conf.get('password')
+        if username and password:
+            if PY2K:
+                username = username.encode('ascii')
+                password = password.encode('ascii')
+
+            self.client.login(username, password)
 
         return self.client
 
@@ -125,7 +130,7 @@ class SMTP(object):
         to_addr = self.conf.get("to")
 
         msg = MIMEText(body, 'plain', 'utf-8')
-        msg['From'] = "Ich schrei sonst! <%s>" % from_addr
+        msg['From'] = from_addr
         msg['To'] = to_addr
         msg['Date'] = formatdate(localtime=True)
         msg['Subject'] = Header(subject, 'utf-8')

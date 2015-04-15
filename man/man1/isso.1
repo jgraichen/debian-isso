@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "ISSO" "1" "April 09, 2014" "0.8" "Isso"
+.TH "ISSO" "1" "April 11, 2015" "0.9" "Isso"
 .SH NAME
 isso \- a Disqus alternative
 .
@@ -52,7 +52,7 @@ times).
 .SS Quickstart
 .sp
 Assuming you have successfully \fBinstalled\fP Isso, here\(aqs
-a quickstart quide that covers common setups. Sections covered:
+a quickstart quide that covers the most common setup. Sections covered:
 .INDENT 0.0
 .IP \(bu 2
 \fI\%Configuration\fP
@@ -67,17 +67,16 @@ a quickstart quide that covers common setups. Sections covered:
 .UNINDENT
 .SS Configuration
 .sp
-You must provide a custom configuration. Most default parameters are useful for
-development, not persistence. The two most important options are \fIdbpath\fP to
-set the location of your database and your website\(aqs name \fIhost\fP where you want
-to comment on:
+You must provide a custom configuration to set \fIdbpath\fP (your database
+location) and \fIhost\fP (a list of websites for \fI\%CORS\fP). All other options have
+sane defaults.
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
 [general]
-; database location, check permissions, created if not exists
+; database location, check permissions, automatically created if not exists
 dbpath = /var/lib/isso/comments.db
 ; your website or blog (not the location of Isso!)
 host = http://example.tld/
@@ -97,9 +96,9 @@ Note, that multiple, \fIdifferent\fP websites are \fBnot\fP supported in a singl
 configuration. To serve comments for diffent websites, refer to
 \fIMultiple Sites\fP\&.
 .sp
-You moderate Isso through signed URLs sent by email or logged. By default,
-comments are accepted and immediately shown to other users. To enable
-moderation queue, add:
+The moderation is done with signed URLs sent by email or logged to stdout.
+By default, comments are accepted and immediately shown to other users. To
+enable moderation queue, add:
 .INDENT 0.0
 .INDENT 3.5
 .sp
@@ -129,22 +128,26 @@ notify = smtp
 .UNINDENT
 .UNINDENT
 .sp
-For more details, see \fBserver\fP and
-\fBclient\fP configuration.
+For more options, see \fBserver\fP and \fBclient\fP configuration.
 .SS Migration
 .sp
-You can migrate your existing comments from \fI\%Disqus\fP\&. Log into Disqus, go to
-your website, click on \fIDiscussions\fP and select the \fIExport\fP tab. You\(aqll
-receive an email with your comments. Unfortunately, Disqus does not export
-up\- and downvotes.
+You can import comments from \fI\%Disqus\fP or \fI\%WordPress\fP\&.
 .sp
-To import existing comments, run Isso with your new configuration file:
+To export your comments from Disqus, log into Disqus, go to your website, click
+on \fIDiscussions\fP and select the \fIExport\fP tab. You\(aqll receive an email with your
+comments. Unfortunately, Disqus does not export up\- and downvotes.
+.sp
+To export comments from your previous WordPress installation, go to \fITools\fP,
+export your data. It has been reported that WordPress may generate broken XML.
+Try to repair the file using \fBxmllint\fP before you continue with the import.
+.sp
+Now import the XML dump:
 .INDENT 0.0
 .INDENT 3.5
 .sp
 .nf
 .ft C
-~> isso \-c /path/to/isso.cfg import user\-2013\-09\-02T11_39_22.971478\-all.xml
+~> isso \-c /path/to/isso.cfg import disqus\-or\-wordpress.xml
 [100%]  53 threads, 192 comments
 .ft P
 .fi
@@ -226,16 +229,44 @@ quickstart, check out \fBconfiguration/server\fP and
 \fBconfiguration/client\fP for more information. For further website
 integration, see \fBextras/advanced\-integration\fP\&.
 .sp
-If you wondered how to automatically start Isso you may find a short script
-for various popular init/supervisor daemons here: \fBinstall\fP\&. Another
-important topic is the actual \fBdeployment of Isso\fP
-(and every Python web application in general).
+To launch Isso automatically, check the \fIinit\-scripts\fP section from the
+installation guide. A different approach to deploy a web application is
+written here: \fBDeployment of Isso\fP\&.
 .SS Troubleshooting
+.SS pkg_ressources.DistributionNotFound
 .sp
-To be written.
+This is usually caused by messing up the system\(aqs Python with newer packages
+from PyPi (e.g. by executing \fIeasy_install \-\-upgrade pip\fP as root) and is not
+related to Isso at all.
+.sp
+Install Isso in a virtual environment as described in
+\fIinstall\-interludium\fP\&. Alternatively, you can use \fIpip install \-\-user\fP
+to install Isso into the user\(aqs home.
+.SS UnicodeDecodeError: \(aqascii\(aq codec can\(aqt decode byte 0xff
+.sp
+Likely an issue with your environment, check you set your preferred file
+encoding either in \fBLANG\fP, \fBLANGUAGE\fP, \fBLC_ALL\fP or
+\fBLC_CTYPE\fP:
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ env LANG=C.UTF\-8 isso [\-h] [\-\-version] ...
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+If none of the mentioned variables is set, the interaction with Isso will
+likely fail (unable to print non\-ascii characters to stdout/err, unable to
+parse configuration file with non\-ascii characters and to forth).
+.SS The web console shows 404 Not Found responses
+.sp
+That\(aqs fine. Isso returns "404 Not Found" to indicate "No comments".
 .SH AUTHOR
 Martin Zimmermann
 .SH COPYRIGHT
-2013, Martin Zimmermann
+2014, Martin Zimmermann
 .\" Generated by docutils manpage writer.
 .

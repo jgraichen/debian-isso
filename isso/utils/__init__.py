@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 
-from __future__ import division
+from __future__ import division, unicode_literals
 
 import pkg_resources
 werkzeug = pkg_resources.get_distribution("werkzeug")
@@ -8,13 +8,10 @@ werkzeug = pkg_resources.get_distribution("werkzeug")
 import json
 import hashlib
 
-try:
-    from html.parser import HTMLParser, HTMLParseError
-except ImportError:
-    from HTMLParser import HTMLParser, HTMLParseError
-
-from werkzeug.wrappers import Request, Response
+from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest
+
+from isso.wsgi import Request
 
 try:
     import ipaddress

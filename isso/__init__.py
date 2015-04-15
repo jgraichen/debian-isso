@@ -3,7 +3,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2012-2013 Martin Zimmermann.
+# Copyright (c) 2012-2014 Martin Zimmermann.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
 #
 # Isso – a lightweight Disqus alternative
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import pkg_resources
 dist = pkg_resources.get_distribution("isso")
@@ -47,6 +47,9 @@ import tempfile
 from os.path import dirname, join
 from argparse import ArgumentParser
 from functools import partial, reduce
+
+import pkg_resources
+werkzeug = pkg_resources.get_distribution("werkzeug")
 
 from itsdangerous import URLSafeTimedSerializer
 
@@ -70,7 +73,7 @@ from isso.views import comments
 
 from isso.ext.notifications import Stdout, SMTP
 
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.WARN)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s: %(message)s")
@@ -92,10 +95,13 @@ class Isso(object):
         super(Isso, self).__init__(conf)
 
         subscribers = []
-        subscribers.append(Stdout(None))
-
-        if conf.get("general", "notify") == "smtp":
-            subscribers.append(SMTP(self))
+        for backend in conf.getlist("general", "notify"):
+            if backend == "stdout":
+                subscribers.append(Stdout(None))
+            elif backend in ("smtp", "SMTP"):
+                subscribers.append(SMTP(self))
+            else:
+                logger.warn("unknown notification backend '%s'", backend)
 
         self.signal = ext.Signal(*subscribers)
 
@@ -180,14 +186,19 @@ def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
 
     wrapper.append(partial(SharedDataMiddleware, exports={
         '/js': join(dirname(__file__), 'js/'),
-        '/css': join(dirname(__file__), 'css/')}))
+        '/css': join(dirname(__file__), 'css/'),
+        '/demo': join(dirname(__file__), 'demo/')
+        }))
 
     wrapper.append(partial(wsgi.CORSMiddleware,
         origin=origin(isso.conf.getiter("general", "host")),
         allowed=("Origin", "Referer", "Content-Type"),
         exposed=("X-Set-Cookie", "Date")))
 
-    wrapper.extend([wsgi.SubURI, ProxyFix])
+    wrapper.extend([wsgi.SubURI, ProxyFix, wsgi.LegacyWerkzeugMiddleware])
+
+    if werkzeug.version.startswith("0.8"):
+        wrapper.append(wsgi.LegacyWerkzeugMiddleware)
 
     return reduce(lambda x, f: f(x), wrapper, isso)
 
@@ -205,6 +216,10 @@ def main():
     imprt.add_argument("dump", metavar="FILE")
     imprt.add_argument("-n", "--dry-run", dest="dryrun", action="store_true",
                        help="perform a trial run with no changes made")
+    imprt.add_argument("-t", "--type", dest="type", default=None,
+                       choices=["disqus", "wordpress"], help="export type")
+    imprt.add_argument("--empty-id", dest="empty_id", action="store_true",
+                       help="workaround for weird Disqus XML exports, #135")
 
     serve = subparser.add_parser("run", help="run server")
 
@@ -212,12 +227,27 @@ def main():
     conf = Config.load(args.conf)
 
     if args.command == "import":
-        xxx = tempfile.NamedTemporaryFile()
-        dbpath = conf.get("general", "dbpath") if not args.dryrun else xxx.name
-
         conf.set("guard", "enabled", "off")
-        migrate.disqus(db.SQLite3(dbpath, conf), args.dump)
+
+        if args.dryrun:
+            xxx = tempfile.NamedTemporaryFile()
+            dbpath = xxx.name
+        else:
+            dbpath = conf.get("general", "dbpath")
+
+        mydb = db.SQLite3(dbpath, conf)
+        migrate.dispatch(args.type, mydb, args.dump, args.empty_id)
+
         sys.exit(0)
+
+    if conf.get("general", "log-file"):
+        handler = logging.FileHandler(conf.get("general", "log-file"))
+
+        logger.addHandler(handler)
+        logging.getLogger("werkzeug").addHandler(handler)
+
+        logger.propagate = False
+        logging.getLogger("werkzeug").propagate = False
 
     if not any(conf.getiter("general", "host")):
         logger.error("No website(s) configured, Isso won't work.")

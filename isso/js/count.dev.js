@@ -1,5 +1,4 @@
-(function () {
-/**
+(function () {/**
  * @license almond 0.2.9 Copyright (c) 2011-2014, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/almond for details
@@ -471,11 +470,11 @@ define('app/lib/promise',[],function() {
         }
     };
 
-    var defer = function() {
+    var Defer = function() {
         this.promise = new Promise();
     };
 
-    defer.prototype = {
+    Defer.prototype = {
         promise: Promise,
         resolve: function(rv) {
             this.promise.success.forEach(function(callback) {
@@ -503,7 +502,7 @@ define('app/lib/promise',[],function() {
     };
 
     return {
-        defer: function() { return new defer(); },
+        defer: function() { return new Defer(); },
         when: when
     };
 
@@ -610,7 +609,8 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
     var qs = function(params) {
         var rv = "";
         for (var key in params) {
-            if (params.hasOwnProperty(key) && params[key]) {
+            if (params.hasOwnProperty(key) &&
+                params[key] !== null && typeof(params[key]) !== "undefined") {
                 rv += key + "=" + encodeURIComponent(params[key]) + "&";
             }
         }
@@ -660,17 +660,31 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
         return deferred.promise;
     };
 
-    var fetch = function(tid) {
+    var fetch = function(tid, limit, nested_limit, parent, lastcreated) {
+        if (typeof(limit) === 'undefined') { limit = "inf"; }
+        if (typeof(nested_limit) === 'undefined') { nested_limit = "inf"; }
+        if (typeof(parent) === 'undefined') { parent = null; }
+
+        var query_dict = {uri: tid || location, after: lastcreated, parent: parent};
+
+        if(limit !== "inf") {
+            query_dict['limit'] = limit;
+        }
+        if(nested_limit !== "inf"){
+            query_dict['nested_limit'] = nested_limit;
+        }
+
         var deferred = Q.defer();
-        curl("GET", endpoint + "/?" + qs({uri: tid || location}), null, function(rv) {
-            if (rv.status === 200) {
-                deferred.resolve(JSON.parse(rv.body));
-            } else if (rv.status === 404) {
-                deferred.resolve([]);
-            } else {
-                deferred.reject(rv.body);
-            }
-        });
+        curl("GET", endpoint + "/?" +
+            qs(query_dict), null, function(rv) {
+                if (rv.status === 200) {
+                    deferred.resolve(JSON.parse(rv.body));
+                } else if (rv.status === 404) {
+                    deferred.resolve({total_replies: 0});
+                } else {
+                    deferred.reject(rv.body);
+                }
+            });
         return deferred.promise;
     };
 
@@ -700,22 +714,9 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
         return deferred.promise;
     };
 
-    var remote_addr = function() {
-        var deferred = Q.defer();
-        curl("GET", endpoint + "/check-ip", null, function(rv) {
-            if (rv.status === 200) {
-                deferred.resolve(rv.body);
-            } else {
-                deferred.reject(rv.body);
-            }
-        });
-        return deferred.promise;
-    };
-
     return {
         endpoint: endpoint,
         salt: salt,
-        remote_addr: remote_addr,
 
         create: create,
         modify: modify,
@@ -769,31 +770,31 @@ define('app/dom',[],function() {
         });
     };
 
-    window.Element.prototype.toggle = function(type, on, off) {
+    window.Element.prototype.toggle = function(type, a, b) {
         /*
         Toggle between two internal states on event :param type: e.g. to
-        cycle form visibility. Callback :param on: is called on first event,
-        :param off: next time.
+        cycle form visibility. Callback :param a: is called on first event,
+        :param b: next time.
 
         You can skip to the next state without executing the callback with
         `toggler.next()`. You can prevent a cycle when you call `toggler.wait()`
         during an event.
          */
 
-        function Toggle(el, on, off) {
+        function Toggle(el, a, b) {
             this.state = false;
             this.el = el;
-            this.on = on;
-            this.off = off;
+            this.a = a;
+            this.b = b;
         }
 
         Toggle.prototype.next = function next() {
             if (! this.state) {
                 this.state = true;
-                this.on(this);
+                this.a(this);
             } else {
                 this.state = false;
-                this.off(this);
+                this.b(this);
             }
         };
 
@@ -801,7 +802,7 @@ define('app/dom',[],function() {
             this.state = ! this.state;
         };
 
-        var toggler = new Toggle(this, on, off);
+        var toggler = new Toggle(this, a, b);
         this.on(type, function() {
             toggler.next();
         });
@@ -821,13 +822,25 @@ define('app/dom',[],function() {
         this.parentNode.removeChild(this);
     };
 
-    var DOM = function(query, root) {
+    window.Element.prototype.show = function() {
+        this.style.display = "block";
+    };
+
+    window.Element.prototype.hide = function() {
+        this.style.display = "none";
+    };
+
+    var DOM = function(query, root, single) {
         /*
         jQuery-like CSS selector which returns on :param query: either a
-        single node, a node list or null.
+        single node (unless single=false), a node list or null.
 
         :param root: only queries within the given element.
          */
+
+        if (typeof single === "undefined") {
+            single = true;
+        }
 
         if (! root) {
             root = window.document;
@@ -839,7 +852,7 @@ define('app/dom',[],function() {
             return null;
         }
 
-        if (elements.length === 1) {
+        if (elements.length === 1 && single) {
             return elements[0];
         }
 
@@ -892,483 +905,6 @@ define('app/dom',[],function() {
 
     return DOM;
 });
-/*
-  Markup.js v1.5.16: http://github.com/adammark/Markup.js
-  MIT License
-  (c) 2011 - 2013 Adam Mark
-*/
-var Mark = {
-    // Templates to include, by name. A template is a string.
-    includes: {},
-
-    // Global variables, by name. Global variables take precedence over context variables.
-    globals: {},
-
-    // The delimiter to use in pipe expressions, e.g. {{if color|like>red}}.
-    delimiter: ">",
-
-    // Collapse white space between HTML elements in the resulting string.
-    compact: false,
-
-    // Shallow-copy an object.
-    _copy: function (a, b) {
-        b = b || [];
-
-        for (var i in a) {
-            b[i] = a[i];
-        }
-
-        return b;
-    },
-
-    // Get the value of a number or size of an array. This is a helper function for several pipes.
-    _size: function (a) {
-        return a instanceof Array ? a.length : (a || 0);
-    },
-
-    // This object represents an iteration. It has an index and length.
-    _iter: function (idx, size) {
-        this.idx = idx;
-        this.size = size;
-        this.length = size;
-        this.sign = "#";
-
-        // Print the index if "#" or the count if "##".
-        this.toString = function () {
-            return this.idx + this.sign.length - 1;
-        };
-    },
-
-    // Pass a value through a series of pipe expressions, e.g. _pipe(123, ["add>10","times>5"]).
-    _pipe: function (val, expressions) {
-        var expression, parts, fn, result;
-
-        // If we have expressions, pull out the first one, e.g. "add>10".
-        if ((expression = expressions.shift())) {
-
-            // Split the expression into its component parts, e.g. ["add", "10"].
-            parts = expression.split(this.delimiter);
-
-            // Pull out the function name, e.g. "add".
-            fn = parts.shift().trim();
-
-            try {
-                // Run the function, e.g. add(123, 10) ...
-                result = Mark.pipes[fn].apply(null, [val].concat(parts));
-
-                // ... then pipe again with remaining expressions.
-                val = this._pipe(result, expressions);
-            }
-            catch (e) {
-            }
-        }
-
-        // Return the piped value.
-        return val;
-    },
-
-    // TODO doc
-    _eval: function (context, filters, child) {
-        var result = this._pipe(context, filters),
-            ctx = result,
-            i = -1,
-            j,
-            opts;
-
-        if (result instanceof Array) {
-            result = "";
-            j = ctx.length;
-
-            while (++i < j) {
-                opts = {
-                    iter: new this._iter(i, j)
-                };
-                result += child ? Mark.up(child, ctx[i], opts) : ctx[i];
-            }
-        }
-        else if (result instanceof Object) {
-            result = Mark.up(child, ctx);
-        }
-
-        return result;
-    },
-
-    // Process the contents of an IF or IF/ELSE block.
-    _test: function (bool, child, context, options) {
-        // Process the child string, then split it into the IF and ELSE parts.
-        var str = Mark.up(child, context, options).split(/\{\{\s*else\s*\}\}/);
-
-        // Return the IF or ELSE part. If no ELSE, return an empty string.
-        return (bool === false ? str[1] : str[0]) || "";
-    },
-
-    // Determine the extent of a block expression, e.g. "{{foo}}...{{/foo}}"
-    _bridge: function (tpl, tkn) {
-        var exp = "{{\\s*" + tkn + "([^/}]+\\w*)?}}|{{/" + tkn + "\\s*}}",
-            re = new RegExp(exp, "g"),
-            tags = tpl.match(re) || [],
-            t,
-            i,
-            a = 0,
-            b = 0,
-            c = -1,
-            d = 0;
-
-        for (i = 0; i < tags.length; i++) {
-            t = i;
-            c = tpl.indexOf(tags[t], c + 1);
-
-            if (tags[t].indexOf("{{/") > -1) {
-                b++;
-            }
-            else {
-                a++;
-            }
-
-            if (a === b) {
-                break;
-            }
-        }
-
-        a = tpl.indexOf(tags[0]);
-        b = a + tags[0].length;
-        d = c + tags[t].length;
-
-        // Return the block, e.g. "{{foo}}bar{{/foo}}" and its child, e.g. "bar".
-        return [tpl.substring(a, d), tpl.substring(b, c)];
-    }
-};
-
-// Inject a template string with contextual data and return a new string.
-Mark.up = function (template, context, options) {
-    context = context || {};
-    options = options || {};
-
-    // Match all tags like "{{...}}".
-    var re = /\{\{(.+?)\}\}/g,
-        // All tags in the template.
-        tags = template.match(re) || [],
-        // The tag being evaluated, e.g. "{{hamster|dance}}".
-        tag,
-        // The expression to evaluate inside the tag, e.g. "hamster|dance".
-        prop,
-        // The token itself, e.g. "hamster".
-        token,
-        // An array of pipe expressions, e.g. ["more>1", "less>2"].
-        filters = [],
-        // Does the tag close itself? e.g. "{{stuff/}}".
-        selfy,
-        // Is the tag an "if" statement?
-        testy,
-        // The contents of a block tag, e.g. "{{aa}}bb{{/aa}}" -> "bb".
-        child,
-        // The resulting string.
-        result,
-        // The global variable being evaluated, or undefined.
-        global,
-        // The included template being evaluated, or undefined.
-        include,
-        // A placeholder variable.
-        ctx,
-        // Iterators.
-        i = 0,
-        j = 0;
-
-    // Set custom pipes, if provided.
-    if (options.pipes) {
-        this._copy(options.pipes, this.pipes);
-    }
-
-    // Set templates to include, if provided.
-    if (options.includes) {
-        this._copy(options.includes, this.includes);
-    }
-
-    // Set global variables, if provided.
-    if (options.globals) {
-        this._copy(options.globals, this.globals);
-    }
-
-    // Optionally override the delimiter.
-    if (options.delimiter) {
-        this.delimiter = options.delimiter;
-    }
-
-    // Optionally collapse white space.
-    if (options.compact !== undefined) {
-        this.compact = options.compact;
-    }
-
-    // Loop through tags, e.g. {{a}}, {{b}}, {{c}}, {{/c}}.
-    while ((tag = tags[i++])) {
-        result = undefined;
-        child = "";
-        selfy = tag.indexOf("/}}") > -1;
-        prop = tag.substr(2, tag.length - (selfy ? 5 : 4));
-        prop = prop.replace(/`(.+?)`/g, function (s, p1) {
-            return Mark.up("{{" + p1 + "}}", context);
-        });
-        testy = prop.trim().indexOf("if ") === 0;
-        filters = prop.split("|");
-        filters.shift(); // instead of splice(1)
-        prop = prop.replace(/^\s*if/, "").split("|").shift().trim();
-        token = testy ? "if" : prop.split("|")[0];
-        ctx = context[prop];
-
-        // If an "if" statement without filters, assume "{{if foo|notempty}}"
-        if (testy && !filters.length) {
-            filters = ["notempty"];
-        }
-
-        // Does the tag have a corresponding closing tag? If so, find it and move the cursor.
-        if (!selfy && template.indexOf("{{/" + token) > -1) {
-            result = this._bridge(template, token);
-            tag = result[0];
-            child = result[1];
-            i += tag.match(re).length - 1; // fast forward
-        }
-
-        // Skip "else" tags. These are pulled out in _test().
-        if (/^\{\{\s*else\s*\}\}$/.test(tag)) {
-            continue;
-        }
-
-        // Evaluating a global variable.
-        else if ((global = this.globals[prop]) !== undefined) {
-            result = this._eval(global, filters, child);
-        }
-
-        // Evaluating an included template.
-        else if ((include = this.includes[prop])) {
-            if (include instanceof Function) {
-                include = include();
-            }
-            result = this._pipe(Mark.up(include, context), filters);
-        }
-
-        // Evaluating a loop counter ("#" or "##").
-        else if (prop.indexOf("#") > -1) {
-            options.iter.sign = prop;
-            result = this._pipe(options.iter, filters);
-        }
-
-        // Evaluating the current context.
-        else if (prop === ".") {
-            result = this._pipe(context, filters);
-        }
-
-        // Evaluating a variable with dot notation, e.g. "a.b.c"
-        else if (prop.indexOf(".") > -1) {
-            prop = prop.split(".");
-            ctx = Mark.globals[prop[0]];
-
-            if (ctx) {
-                j = 1;
-            }
-            else {
-                j = 0;
-                ctx = context;
-            }
-
-            // Get the actual context
-            while (ctx && j < prop.length) {
-                ctx = ctx[prop[j++]];
-            }
-
-            result = this._eval(ctx, filters, child);
-        }
-
-        // Evaluating an "if" statement.
-        else if (testy) {
-            result = this._pipe(ctx, filters);
-        }
-
-        // Evaluating an array, which might be a block expression.
-        else if (ctx instanceof Array) {
-            result = this._eval(ctx, filters, child);
-        }
-
-        // Evaluating a block expression.
-        else if (child) {
-            result = ctx ? Mark.up(child, ctx) : undefined;
-        }
-
-        // Evaluating anything else.
-        else if (context.hasOwnProperty(prop)) {
-            result = this._pipe(ctx, filters);
-        }
-
-        // Evaluating an "if" statement.
-        if (testy) {
-            result = this._test(result, child, context, options);
-        }
-
-        // Replace the tag, e.g. "{{name}}", with the result, e.g. "Adam".
-        template = template.replace(tag, result === undefined ? "???" : result);
-    }
-
-    return this.compact ? template.replace(/>\s+</g, "><") : template;
-};
-
-// Freebie pipes. See usage in README.md
-Mark.pipes = {
-    empty: function (obj) {
-        return !obj || (obj + "").trim().length === 0 ? obj : false;
-    },
-    notempty: function (obj) {
-        return obj && (obj + "").trim().length ? obj : false;
-    },
-    blank: function (str, val) {
-        return !!str || str === 0 ? str : val;
-    },
-    more: function (a, b) {
-        return Mark._size(a) > b ? a : false;
-    },
-    less: function (a, b) {
-        return Mark._size(a) < b ? a : false;
-    },
-    ormore: function (a, b) {
-        return Mark._size(a) >= b ? a : false;
-    },
-    orless: function (a, b) {
-        return Mark._size(a) <= b ? a : false;
-    },
-    between: function (a, b, c) {
-        a = Mark._size(a);
-        return a >= b && a <= c ? a : false;
-    },
-    equals: function (a, b) {
-        return a == b ? a : false;
-    },
-    notequals: function (a, b) {
-        return a != b ? a : false;
-    },
-    like: function (str, pattern) {
-        return new RegExp(pattern, "i").test(str) ? str : false;
-    },
-    notlike: function (str, pattern) {
-        return !Mark.pipes.like(str, pattern) ? str : false;
-    },
-    upcase: function (str) {
-        return String(str).toUpperCase();
-    },
-    downcase: function (str) {
-        return String(str).toLowerCase();
-    },
-    capcase: function (str) {
-        return str.replace(/\b\w/g, function (s) { return s.toUpperCase(); });
-    },
-    chop: function (str, n) {
-        return str.length > n ? str.substr(0, n) + "..." : str;
-    },
-    tease: function (str, n) {
-        var a = str.split(/\s+/);
-        return a.slice(0, n).join(" ") + (a.length > n ? "..." : "");
-    },
-    trim: function (str) {
-        return str.trim();
-    },
-    pack: function (str) {
-        return str.trim().replace(/\s{2,}/g, " ");
-    },
-    round: function (num) {
-        return Math.round(+num);
-    },
-    clean: function (str) {
-        return String(str).replace(/<\/?[^>]+>/gi, "");
-    },
-    size: function (obj) {
-        return obj.length;
-    },
-    length: function (obj) {
-        return obj.length;
-    },
-    reverse: function (arr) {
-        return Mark._copy(arr).reverse();
-    },
-    join: function (arr, separator) {
-        return arr.join(separator);
-    },
-    limit: function (arr, count, idx) {
-        return arr.slice(+idx || 0, +count + (+idx || 0));
-    },
-    split: function (str, separator) {
-        return str.split(separator || ",");
-    },
-    choose: function (bool, iffy, elsy) {
-        return !!bool ? iffy : (elsy || "");
-    },
-    toggle: function (obj, csv1, csv2, str) {
-        return csv2.split(",")[csv1.match(/\w+/g).indexOf(obj + "")] || str;
-    },
-    sort: function (arr, prop) {
-        var fn = function (a, b) {
-            return a[prop] > b[prop] ? 1 : -1;
-        };
-        return Mark._copy(arr).sort(prop ? fn : undefined);
-    },
-    fix: function (num, n) {
-        return (+num).toFixed(n);
-    },
-    mod: function (num, n) {
-        return (+num) % (+n);
-    },
-    divisible: function (num, n) {
-        return num && (+num % n) === 0 ? num : false;
-    },
-    even: function (num) {
-        return num && (+num & 1) === 0 ? num : false;
-    },
-    odd: function (num) {
-        return num && (+num & 1) === 1 ? num : false;
-    },
-    number: function (str) {
-        return parseFloat(str.replace(/[^\-\d\.]/g, ""));
-    },
-    url: function (str) {
-        return encodeURI(str);
-    },
-    bool: function (obj) {
-        return !!obj;
-    },
-    falsy: function (obj) {
-        return !obj;
-    },
-    first: function (iter) {
-        return iter.idx === 0;
-    },
-    last: function (iter) {
-        return iter.idx === iter.size - 1;
-    },
-    call: function (obj, fn) {
-        return obj[fn].apply(obj, [].slice.call(arguments, 2));
-    },
-    set: function (obj, key) {
-        Mark.globals[key] = obj; return "";
-    },
-    log: function (obj) {
-        console.log(obj);
-        return obj;
-    }
-};
-
-// Shim for IE.
-if (typeof String.prototype.trim !== "function") {
-    String.prototype.trim = function() {
-        return this.replace(/^\s+|\s+$/g, ""); 
-    }
-}
-
-// Export for Node.js and AMD.
-if (typeof module !== "undefined" && module.exports) {
-    module.exports = Mark;
-}
-else if (typeof define === "function" && define.amd) {
-    define('vendor/markup',[],function() {
-        return Mark;
-    });
-}
-;
 define('app/config',[],function() {
     
 
@@ -1376,15 +912,21 @@ define('app/config',[],function() {
         "css": true,
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
         "reply-to-self": false,
+        "max-comments-top": "inf",
+        "max-comments-nested": 5,
+        "reveal-on-click": 5,
+        "avatar": true,
         "avatar-bg": "#f0f0f0",
         "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
-                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" ")
+                      "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" "),
+        "vote": true
     };
 
     var js = document.getElementsByTagName("script");
 
     for (var i = 0; i < js.length; i++) {
-        [].forEach.call(js[i].attributes, function(attr) {
+        for (var j = 0; j < js[i].attributes.length; j++) {
+            var attr = js[i].attributes[j];
             if (/^data-isso-/.test(attr.name)) {
                 try {
                     config[attr.name.substring(10)] = JSON.parse(attr.value);
@@ -1392,7 +934,7 @@ define('app/config',[],function() {
                     config[attr.name.substring(10)] = attr.value;
                 }
             }
-        });
+        }
     }
 
     // split avatar-fg on whitespace
@@ -1406,6 +948,7 @@ define('app/i18n/de',{
     "postbox-text": "Kommentar hier eintippen (mindestens 3 Zeichen)",
     "postbox-author": "Name (optional)",
     "postbox-email": "Email (optional)",
+    "postbox-website": "Website (optional)",
     "postbox-submit": "Abschicken",
     "num-comments": "1 Kommentar\n{{ n }} Kommentare",
     "no-comments": "Keine Kommentare bis jetzt",
@@ -1419,6 +962,7 @@ define('app/i18n/de',{
     "comment-deleted": "Kommentar gelöscht.",
     "comment-queued": "Kommentar muss noch freigeschaltet werden.",
     "comment-anonymous": "Anonym",
+    "comment-hidden": "{{ n }} versteckt",
     "date-now": "eben jetzt",
     "date-minute": "vor einer Minute\nvor {{ n }} Minuten",
     "date-hour": "vor einer Stunde\nvor {{ n }} Stunden",
@@ -1432,6 +976,7 @@ define('app/i18n/en',{
     "postbox-text": "Type Comment Here (at least 3 chars)",
     "postbox-author": "Name (optional)",
     "postbox-email": "E-mail (optional)",
+    "postbox-website": "Website (optional)",
     "postbox-submit": "Submit",
 
     "num-comments": "One Comment\n{{ n }} Comments",
@@ -1447,6 +992,7 @@ define('app/i18n/en',{
     "comment-deleted": "Comment deleted.",
     "comment-queued": "Comment in queue for moderation.",
     "comment-anonymous": "Anonymous",
+    "comment-hidden": "{{ n }} Hidden",
 
     "date-now": "right now",
     "date-minute": "a minute ago\n{{ n }} minutes ago",
@@ -1459,8 +1005,9 @@ define('app/i18n/en',{
 
 define('app/i18n/fr',{
     "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
-    "postbox-author": "Nom (optionel)",
-    "postbox-email": "Courriel (optionel)",
+    "postbox-author": "Nom (optionnel)",
+    "postbox-email": "Courriel (optionnel)",
+    "postbox-website": "Site web (optionnel)",
     "postbox-submit": "Soumettre",
     "num-comments": "{{ n }} commentaire\n{{ n }} commentaires",
     "no-comments": "Aucun commentaire pour l'instant",
@@ -1474,17 +1021,18 @@ define('app/i18n/fr',{
     "comment-deleted": "Commentaire supprimé.",
     "comment-queued": "Commentaire en attente de modération.",
     "comment-anonymous": "Anonyme",
-    "date-now": "À l'instant'",
-    "date-minute": "Il y a une minute \n{{ n }} minutes",
-    "date-hour": "Il y a une heure\n{{ n }} heures ",
-    "date-day": "Hier\n{{ n }} jours auparavant",
-    "date-week": "Il y a une semaine\n{{ n }} semaines",
-    "date-month": "Il y a un mois\n{{ n }} mois",
-    "date-year": "Il y a un an\n{{ n }} ans"
+    "comment-hidden": "1 caché\n{{ n }} cachés",
+    "date-now": "À l'instant",
+    "date-minute": "Il y a une minute\nIl y a {{ n }} minutes",
+    "date-hour": "Il y a une heure\nIl y a {{ n }} heures ",
+    "date-day": "Hier\nIl y a {{ n }} jours",
+    "date-week": "Il y a une semaine\nIl y a {{ n }} semaines",
+    "date-month": "Il y a un mois\nIl y a {{ n }} mois",
+    "date-year": "Il y a un an\nIl y a {{ n }} ans"
 });
 
 define('app/i18n/ru',{
-    "postbox-text": "Комментировать здесь  (миниум 3 символа)",
+    "postbox-text": "Комментировать здесь  (минимум 3 символа)",
     "postbox-author": "Имя (необязательно)",
     "postbox-email": "Email (необязательно)",
     "postbox-submit": "Отправить",
@@ -1499,7 +1047,7 @@ define('app/i18n/ru',{
     "comment-cancel": "Отменить",
     "comment-deleted": "Удалить комментарий",
     "comment-queued": "Комментарий должен быть разблокирован",
-    "comment-anonymous": "Аномимый",
+    "comment-anonymous": "Анонимный",
     "date-now": "Сейчас",
     "date-minute": "Минут назад\n{{ n }} минут",
     "date-hour": "Час назад\n{{ n }} часов",
@@ -1513,6 +1061,7 @@ define('app/i18n/it',{
     "postbox-text": "Scrivi un commento qui (minimo 3 caratteri)",
     "postbox-author": "Nome (opzionale)",
     "postbox-email": "E-mail (opzionale)",
+    "postbox-website": "Sito web (opzionale)",
     "postbox-submit": "Invia",
     "num-comments": "Un Commento\n{{ n }} Commenti",
     "no-comments": "Ancora Nessun Commento",
@@ -1526,6 +1075,7 @@ define('app/i18n/it',{
     "comment-deleted": "Commento eliminato.",
     "comment-queued": "Commento in coda per moderazione.",
     "comment-anonymous": "Anonimo",
+    "comment-hidden": "{{ n }} Nascosto",
     "date-now": "poco fa",
     "date-minute": "un minuto fa\n{{ n }} minuti fa",
     "date-hour": "un ora fa\n{{ n }} ore fa",
@@ -1535,124 +1085,119 @@ define('app/i18n/it',{
     "date-year": "quest'anno\n{{ n }} anni fa"
 });
 
-define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it"], function(config, de, en, fr, ru, it) {
+define('app/i18n/eo',{
+    "postbox-text": "Tajpu komenton ĉi-tie (almenaŭ 3 signoj)",
+    "postbox-author": "Nomo (malnepra)",
+    "postbox-email": "Retadreso (malnepra)",
+    "postbox-website": "Retejo (malnepra)",
+    "postbox-submit": "Sendu",
+    "num-comments": "{{ n }} komento\n{{ n }} komentoj",
+    "no-comments": "Neniu komento ankoraŭ",
+    "comment-reply": "Respondu",
+    "comment-edit": "Redaktu",
+    "comment-save": "Savu",
+    "comment-delete": "Forviŝu",
+    "comment-confirm": "Konfirmu",
+    "comment-close": "Fermu",
+    "comment-cancel": "Malfaru",
+    "comment-deleted": "Komento forviŝita",
+    "comment-queued": "Komento en atendovico por kontrolo.",
+    "comment-anonymous": "Sennoma",
+    "comment-hidden": "{{ n }} kaŝitaj",
+    "date-now": "ĵus nun",
+    "date-minute": "antaŭ unu minuto\nantaŭ {{ n }} minutoj",
+    "date-hour": "antaŭ unu horo\nantaŭ {{ n }} horoj",
+    "date-day": "hieraŭ\nantaŭ {{ n }} tagoj",
+    "date-week": "lasta semajno\nantaŭ {{ n }} semajnoj",
+    "date-month": "lasta monato\nantaŭ {{ n }} monatoj",
+    "date-year": "lasta jaro\nantaŭ {{ n }} jaroj"
+});
+
+define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it", "app/i18n/eo"], function(config, de, en, fr, ru, it, eo) {
 
     
 
-    // pluralization functions for each language you support
-    var plurals = {
-        "en": function(msgs, n) {
-            return msgs[n === 1 ? 0 : 1];
-        },
-        "fr": function(msgs, n) {
-            return msgs[n > 1 ? 1 : 0]
-        },
-        "ru": function(msg, n) {
-            if (n % 10 === 1 && n % 100 !== 11) {
-                return msg[0];
-            } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
-                return msg[1];
-            } else {
-                return msg[2] !== undefined ? msg[2] : msg[1];
-            }
+    var pluralforms = function(lang) {
+        switch (lang) {
+        case "en":
+        case "de":
+        case "it":
+        case "eo":
+            return function(msgs, n) {
+                return msgs[n === 1 ? 0 : 1];
+            };
+        case "fr":
+            return function(msgs, n) {
+                return msgs[n > 1 ? 1 : 0];
+            };
+        case "ru":
+            return function(msgs, n) {
+                if (n % 10 === 1 && n % 100 !== 11) {
+                    return msgs[0];
+                } else if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) {
+                    return msgs[1];
+                } else {
+                    return typeof msgs[2] !== "undefined" ? msgs[2] : msgs[1];
+                }
+            };
+        default:
+            return null;
         }
     };
-
-    plurals["de"] = plurals["en"];
-    plurals["it"] = plurals["en"];
 
     // useragent's prefered language (or manually overridden)
     var lang = config.lang;
 
     // fall back to English
-    if (!plurals[lang]) {
+    if (! pluralforms(lang)) {
         lang = "en";
     }
 
-    return {
-        plurals: plurals,
-        lang: lang,
+    var catalogue = {
         de: de,
         en: en,
         fr: fr,
         ru: ru,
-        it: it
-    };
-});
-
-define('app/text/svg',[],function () {
-    return {};
-});
-define('app/markup',["vendor/markup", "app/i18n", "app/text/svg"], function(Mark, i18n, svg) {
-
-    
-
-    var pad = function(n, width, z) {
-        z = z || '0';
-        n = n + '';
-        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+        it: it,
+        eo: eo
     };
 
-    // circumvent https://github.com/adammark/Markup.js/issues/22
-    function merge(obj) {
-        var result = {};
-        for (var prefix in obj) {
-            for (var attrname in obj[prefix]) {
-                result[prefix + "-" + attrname] = obj[prefix][attrname];
-            }
-        }
-        return result;
-    }
+    var plural = pluralforms(lang);
 
-    Mark.delimiter = ":";
-    Mark.includes = merge({
-        i18n: i18n[i18n.lang],
-        svg: svg
-    });
+    var translate = function(msgid) {
+        return catalogue[lang][msgid] || en[msgid] || "???";
+    };
 
-    Mark.pipes.datetime = function(date) {
-        if (typeof date !== "object") {
-            date = new Date(parseInt(date, 10) * 1000);
+    var pluralize = function(msgid, n) {
+        var msg;
+
+        msg = translate(msgid);
+        if (msg.indexOf("\n") > -1) {
+            msg = plural(msg.split("\n"), (+ n));
         }
 
-        return [date.getUTCFullYear(), pad(date.getUTCMonth(), 2), pad(date.getUTCDay(), 2)].join("-");
-    };
-
-    Mark.pipes.substract = function(a, b) {
-        return parseInt(a, 10) - parseInt(b, 10);
-    };
-
-    Mark.pipes.pluralize = function(str, n) {
-        return i18n.plurals[i18n.lang](str.split("\n"), +n).trim();
-    };
-
-    var strip = function(string) {
-        // allow whitespace between Markup.js delimiters such as
-        // {{ var | pipe : arg }} instead of {{var|pipe:arg}}
-        return string.replace(/\{\{\s*(.+?)\s*\}\}/g, function(match, val) {
-            return ("{{" + val + "}}").replace(/\s*\|\s*/g, "|")
-                                      .replace(/\s*\:\s*/g, ":");
-        });
+        return msg ? msg.replace("{{ n }}", (+ n)) : msg;
     };
 
     return {
-        up: function(template, context) {
-            return Mark.up(strip(template), context);
-        }
+        lang: lang,
+        translate: translate,
+        pluralize: pluralize
     };
 });
-define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) {
+
+define('app/count',["app/api", "app/dom", "app/i18n"], function(api, $, i18n) {
     return function() {
 
         var objs = {};
 
         $.each("a", function(el) {
-            if (! el.href.match("#isso-thread$")) {
+            if (! el.href.match(/#isso-thread$/)) {
                 return;
             }
 
             var tid = el.getAttribute("data-isso-id") ||
-                      el.href.match("^(.+)#isso-thread$")[1]
+                      el.href.match(/^(.+)#isso-thread$/)[1]
                              .replace(/^.*\/\/[^\/]+/, '');
 
             if (tid in objs) {
@@ -1671,9 +1216,7 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
                     var index = urls.indexOf(key);
 
                     for (var i = 0; i < objs[key].length; i++) {
-                        objs[key][i].textContent = Mark.up(
-                            "{{ i18n-num-comments | pluralize : `n` }}",
-                            {n: rv[index]});
+                        objs[key][i].textContent = i18n.pluralize("num-comments", rv[index]);
                     }
                 }
             }
@@ -1684,8 +1227,9 @@ define('app/count',["app/api", "app/dom", "app/markup"], function(api, $, Mark) 
 require(["app/lib/ready", "app/count"], function(domready, count) {
     domready(function() {
         count();
-    })
+    });
 });
 
 define("count", function(){});
+
 }());

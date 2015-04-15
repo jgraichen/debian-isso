@@ -2,9 +2,14 @@
 
 import sqlite3
 import logging
+import operator
 import os.path
 
+from collections import defaultdict
+
 logger = logging.getLogger("isso")
+
+from isso.compat import buffer
 
 from isso.db.comments import Comments
 from isso.db.threads import Threads
@@ -19,7 +24,7 @@ class SQLite3:
     a trigger for automated orphan removal.
     """
 
-    MAX_VERSION = 2
+    MAX_VERSION = 3
 
     def __init__(self, path, conf):
 
@@ -88,4 +93,29 @@ class SQLite3:
                         self.conf.get("general", "session-key"), "session-key"))
 
                 con.execute('PRAGMA user_version = 2')
+                logger.info("%i rows changed", con.total_changes)
+
+        # limit max. nesting level to 1
+        if self.version == 2:
+
+            first = lambda rv: list(map(operator.itemgetter(0), rv))
+
+            with sqlite3.connect(self.path) as con:
+                top = first(con.execute("SELECT id FROM comments WHERE parent IS NULL").fetchall())
+                flattened = defaultdict(set)
+
+                for id in top:
+
+                    ids = [id, ]
+
+                    while ids:
+                        rv = first(con.execute("SELECT id FROM comments WHERE parent=?", (ids.pop(), )))
+                        ids.extend(rv)
+                        flattened[id].update(set(rv))
+
+                for id in flattened.keys():
+                    for n in flattened[id]:
+                        con.execute("UPDATE comments SET parent=? WHERE id=?", (id, n))
+
+                con.execute('PRAGMA user_version = 3')
                 logger.info("%i rows changed", con.total_changes)

@@ -1,5 +1,8 @@
 # -*- encoding: utf-8 -*-
 
+from __future__ import unicode_literals
+
+import sys
 import socket
 
 try:
@@ -15,6 +18,7 @@ except ImportError:
     from BaseHTTPServer import HTTPServer
 
 from werkzeug.serving import WSGIRequestHandler
+from werkzeug.wrappers import Request as _Request
 from werkzeug.datastructures import Headers
 
 from isso.compat import string_types
@@ -140,10 +144,39 @@ class CORSMiddleware(object):
             return start_response(status, headers.to_list(), exc_info)
 
         if environ.get("REQUEST_METHOD") == "OPTIONS":
-            add_cors_headers("200 Ok", [("Content-Type", "text/plain")])
+            add_cors_headers(b"200 Ok", [("Content-Type", "text/plain")])
             return [b'200 Ok']
 
         return self.app(environ, add_cors_headers)
+
+
+class LegacyWerkzeugMiddleware(object):
+    # Add compatibility with werkzeug 0.8
+    # -- https://github.com/posativ/isso/pull/170
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+
+        def to_native(x, charset=sys.getdefaultencoding(), errors='strict'):
+            if x is None or isinstance(x, str):
+                return x
+            return x.decode(charset, errors)
+
+        def fix_headers(status, headers, exc_info=None):
+            headers = [(to_native(key), value) for key, value in headers]
+            return start_response(status, headers, exc_info)
+
+        return self.app(environ, fix_headers)
+
+
+class Request(_Request):
+
+    # Assuming UTF-8, comments with 65536 characters would consume
+    # 128 kb memory. The remaining 128 kb cover additional parameters
+    # and WSGI headers.
+    max_content_length = 256 * 1024
 
 
 class SocketWSGIRequestHandler(WSGIRequestHandler):
