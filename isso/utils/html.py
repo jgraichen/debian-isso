@@ -1,66 +1,102 @@
 # -*- encoding: utf-8 -*-
 
-import html5lib
+from __future__ import unicode_literals
 
+import operator
+import pkg_resources
+
+from distutils.version import LooseVersion as Version
+
+HTML5LIB_VERSION = Version(pkg_resources.get_distribution("html5lib").version)
+HTML5LIB_SIMPLETREE = Version("0.95")
+
+from isso.compat import reduce
+
+import html5lib
 from html5lib.sanitizer import HTMLSanitizer
 from html5lib.serializer import HTMLSerializer
-from html5lib.treewalkers import getTreeWalker
 
 import misaka
 
 
-class MarkdownSanitizer(HTMLSanitizer):
+def Sanitizer(elements, attributes):
 
-    # attributes found in Sundown's HTML serializer [1] except for <img> tag,
-    # because images are not generated anyways.
-    #
-    # [1] https://github.com/vmg/sundown/blob/master/html/html.c
-    allowed_elements = ["a", "p", "hr", "br", "ol", "ul", "li",
-                        "pre", "code", "blockquote",
-                        "del", "ins", "strong", "em",
-                        "h1", "h2", "h3", "h4", "h5", "h6",
-                        "table", "thead", "tbody", "th", "td"]
+    class Inner(HTMLSanitizer):
 
-    # href for <a> and align for <table>
-    allowed_attributes = ["align", "href"]
+        # attributes found in Sundown's HTML serializer [1] except for <img> tag,
+        # because images are not generated anyways.
+        #
+        # [1] https://github.com/vmg/sundown/blob/master/html/html.c
+        allowed_elements = ["a", "p", "hr", "br", "ol", "ul", "li",
+                            "pre", "code", "blockquote",
+                            "del", "ins", "strong", "em",
+                            "h1", "h2", "h3", "h4", "h5", "h6",
+                            "table", "thead", "tbody", "th", "td"] + elements
 
-    # remove disallowed tokens from the output
-    def disallowed_token(self, token, token_type):
-        return None
+        # href for <a> and align for <table>
+        allowed_attributes = ["align", "href"] + attributes
+
+        # remove disallowed tokens from the output
+        def disallowed_token(self, token, token_type):
+            return None
+
+    return Inner
 
 
-def sanitize(document):
+def sanitize(tokenizer, document):
 
-    parser = html5lib.HTMLParser(tokenizer=MarkdownSanitizer)
+    parser = html5lib.HTMLParser(tokenizer=tokenizer)
     domtree = parser.parseFragment(document)
 
-    stream = html5lib.treewalkers.getTreeWalker('etree')(domtree)
+    if HTML5LIB_VERSION > HTML5LIB_SIMPLETREE:
+        builder = "etree"
+    else:
+        builder = "simpletree"
+
+    stream = html5lib.treewalkers.getTreeWalker(builder)(domtree)
     serializer = HTMLSerializer(quote_attr_values=True, omit_optional_tags=False)
 
     return serializer.render(stream)
 
 
-def markdown(text):
-    """Convert Markdown to (safe) HTML.
+def Markdown(extensions=("strikethrough", "superscript", "autolink")):
 
-    >>> markdown("*Ohai!*") # doctest: +IGNORE_UNICODE
-    '<p><em>Ohai!</em></p>'
-    >>> markdown("<em>Hi</em>") # doctest: +IGNORE_UNICODE
-    '<p><em>Hi</em></p>'
-    >>> markdown("<script>alert('Onoe')</script>") # doctest: +IGNORE_UNICODE
-    "<p>alert('Onoe')</p>"
-    >>> markdown("http://example.org/ and sms:+1234567890") # doctest: +IGNORE_UNICODE
-    '<p><a href="http://example.org/">http://example.org/</a> and sms:+1234567890</p>'
+    flags = reduce(operator.xor, map(
+        lambda ext: getattr(misaka, 'EXT_' + ext.upper()), extensions), 0)
+    md = misaka.Markdown(Unofficial(), extensions=flags)
+
+    def inner(text):
+        rv = md.render(text).rstrip("\n")
+        if rv.startswith("<p>") or rv.endswith("</p>"):
+            return rv
+        return "<p>" + rv + "</p>"
+
+    return inner
+
+
+class Unofficial(misaka.HtmlRenderer):
+    """A few modifications to process "common" Markdown.
+
+    For instance, fenced code blocks (~~~ or ```) are just wrapped in <code>
+    which does not preserve line breaks. If a language is given, it is added
+    to <code class="$lang">, compatible with Highlight.js.
     """
 
-    # ~~strike through~~, sub script: 2^(nd) and http://example.org/ auto-link
-    exts = misaka.EXT_STRIKETHROUGH | misaka.EXT_SUPERSCRIPT | misaka.EXT_AUTOLINK
+    def block_code(self, text, lang):
+        lang = ' class="{0}"'.format(lang) if lang else ''
+        return "<pre><code{1}>{0}</code></pre>\n".format(text, lang)
 
-    # remove HTML tags, skip <img> (for now) and only render "safe" protocols
-    html = misaka.HTML_SKIP_STYLE | misaka.HTML_SKIP_IMAGES | misaka.HTML_SAFELINK
 
-    rv = misaka.html(text, extensions=exts, render_flags=html).rstrip("\n")
-    if not rv.startswith("<p>") and not rv.endswith("</p>"):
-        rv = "<p>" + rv + "</p>"
+class Markup(object):
 
-    return sanitize(rv)
+    def __init__(self, conf):
+
+        parser = Markdown(conf.getlist("options"))
+        sanitizer = Sanitizer(
+            conf.getlist("allowed-elements"),
+            conf.getlist("allowed-attributes"))
+
+        self._render = lambda text: sanitize(sanitizer, parser(text))
+
+    def render(self, text):
+        return self._render(text)

@@ -3,7 +3,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2012-2013 Martin Zimmermann.
+# Copyright (c) 2012-2014 Martin Zimmermann.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@
 #
 # Isso – a lightweight Disqus alternative
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import pkg_resources
 dist = pkg_resources.get_distribution("isso")
@@ -48,6 +48,9 @@ from os.path import dirname, join
 from argparse import ArgumentParser
 from functools import partial, reduce
 
+import pkg_resources
+werkzeug = pkg_resources.get_distribution("werkzeug")
+
 from itsdangerous import URLSafeTimedSerializer
 
 from werkzeug.routing import Map
@@ -64,12 +67,13 @@ local_manager = LocalManager([local])
 
 from isso import db, migrate, wsgi, ext, views
 from isso.core import ThreadedMixin, ProcessMixin, uWSGIMixin, Config
-from isso.utils import parse, http, JSONRequest, origin
+from isso.wsgi import origin, urlsplit
+from isso.utils import http, JSONRequest, html
 from isso.views import comments
 
 from isso.ext.notifications import Stdout, SMTP
 
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('werkzeug').setLevel(logging.WARN)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s: %(message)s")
@@ -85,15 +89,19 @@ class Isso(object):
 
         self.conf = conf
         self.db = db.SQLite3(conf.get('general', 'dbpath'), conf)
-        self.signer = URLSafeTimedSerializer(conf.get('general', 'session-key'))
+        self.signer = URLSafeTimedSerializer(self.db.preferences.get("session-key"))
+        self.markup = html.Markup(conf.section('markup'))
 
         super(Isso, self).__init__(conf)
 
         subscribers = []
-        subscribers.append(Stdout(None))
-
-        if conf.get("general", "notify") == "smtp":
-            subscribers.append(SMTP(self))
+        for backend in conf.getlist("general", "notify"):
+            if backend == "stdout":
+                subscribers.append(Stdout(None))
+            elif backend in ("smtp", "SMTP"):
+                subscribers.append(SMTP(self))
+            else:
+                logger.warn("unknown notification backend '%s'", backend)
 
         self.signal = ext.Signal(*subscribers)
 
@@ -101,6 +109,9 @@ class Isso(object):
 
         views.Info(self)
         comments.API(self)
+
+    def render(self, text):
+        return self.markup.render(text)
 
     def sign(self, obj):
         return self.signer.dumps(obj)
@@ -141,22 +152,20 @@ class Isso(object):
 
 def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
 
+    if not any((threading, multiprocessing, uwsgi)):
+        raise RuntimeError("either set threading, multiprocessing or uwsgi")
+
     if threading:
         class App(Isso, ThreadedMixin):
             pass
-
-    if multiprocessing:
+    elif multiprocessing:
         class App(Isso, ProcessMixin):
             pass
-
-    if uwsgi:
+    else:
         class App(Isso, uWSGIMixin):
             pass
 
     isso = App(conf)
-
-    # show session-key (to see that it changes randomely if unset)
-    logger.info("session-key = %s", isso.conf.get("general", "session-key"))
 
     # check HTTP server connection
     for host in conf.getiter("general", "host"):
@@ -165,22 +174,31 @@ def make_app(conf=None, threading=True, multiprocessing=False, uwsgi=False):
                 logger.info("connected to %s", host)
                 break
     else:
-        logger.warn("unable to connect to %s", ", ".join(conf.getiter("general", "host")))
+        logger.warn("unable to connect to your website, Isso will probably not "
+                    "work correctly. Please make sure, Isso can reach your "
+                    "website via HTTP(S).")
 
     wrapper = [local_manager.make_middleware]
 
     if isso.conf.getboolean("server", "profile"):
         wrapper.append(partial(ProfilerMiddleware,
-            sort_by=("cumtime", ), restrictions=("isso/(?!lib)", 10)))
+            sort_by=("cumulative", ), restrictions=("isso/(?!lib)", 10)))
 
     wrapper.append(partial(SharedDataMiddleware, exports={
         '/js': join(dirname(__file__), 'js/'),
-        '/css': join(dirname(__file__), 'css/')}))
+        '/css': join(dirname(__file__), 'css/'),
+        '/demo': join(dirname(__file__), 'demo/')
+        }))
 
     wrapper.append(partial(wsgi.CORSMiddleware,
-        origin=origin(isso.conf.getiter("general", "host"))))
+        origin=origin(isso.conf.getiter("general", "host")),
+        allowed=("Origin", "Referer", "Content-Type"),
+        exposed=("X-Set-Cookie", "Date")))
 
-    wrapper.extend([wsgi.SubURI, ProxyFix])
+    wrapper.extend([wsgi.SubURI, ProxyFix, wsgi.LegacyWerkzeugMiddleware])
+
+    if werkzeug.version.startswith("0.8"):
+        wrapper.append(wsgi.LegacyWerkzeugMiddleware)
 
     return reduce(lambda x, f: f(x), wrapper, isso)
 
@@ -198,6 +216,10 @@ def main():
     imprt.add_argument("dump", metavar="FILE")
     imprt.add_argument("-n", "--dry-run", dest="dryrun", action="store_true",
                        help="perform a trial run with no changes made")
+    imprt.add_argument("-t", "--type", dest="type", default=None,
+                       choices=["disqus", "wordpress"], help="export type")
+    imprt.add_argument("--empty-id", dest="empty_id", action="store_true",
+                       help="workaround for weird Disqus XML exports, #135")
 
     serve = subparser.add_parser("run", help="run server")
 
@@ -205,15 +227,34 @@ def main():
     conf = Config.load(args.conf)
 
     if args.command == "import":
-        xxx = tempfile.NamedTemporaryFile()
-        dbpath = conf.get("general", "dbpath") if not args.dryrun else xxx.name
-
         conf.set("guard", "enabled", "off")
-        migrate.disqus(db.SQLite3(dbpath, conf), args.dump)
+
+        if args.dryrun:
+            xxx = tempfile.NamedTemporaryFile()
+            dbpath = xxx.name
+        else:
+            dbpath = conf.get("general", "dbpath")
+
+        mydb = db.SQLite3(dbpath, conf)
+        migrate.dispatch(args.type, mydb, args.dump, args.empty_id)
+
         sys.exit(0)
 
+    if conf.get("general", "log-file"):
+        handler = logging.FileHandler(conf.get("general", "log-file"))
+
+        logger.addHandler(handler)
+        logging.getLogger("werkzeug").addHandler(handler)
+
+        logger.propagate = False
+        logging.getLogger("werkzeug").propagate = False
+
+    if not any(conf.getiter("general", "host")):
+        logger.error("No website(s) configured, Isso won't work.")
+        sys.exit(1)
+
     if conf.get("server", "listen").startswith("http://"):
-        host, port, _ = parse.host(conf.get("server", "listen"))
+        host, port, _ = urlsplit(conf.get("server", "listen"))
         try:
             from gevent.pywsgi import WSGIServer
             WSGIServer((host, port), make_app(conf)).serve_forever()

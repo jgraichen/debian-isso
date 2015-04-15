@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
 
-import sys
+from __future__ import unicode_literals
 
+import sys
 from setuptools import setup, find_packages
 
 requires = ['itsdangerous', 'misaka', 'html5lib']
@@ -17,7 +18,7 @@ else:
 
 setup(
     name='isso',
-    version='0.7',
+    version='0.9.10',
     author='Martin Zimmermann',
     author_email='info@posativ.org',
     packages=find_packages(),
@@ -40,5 +41,5 @@ setup(
     entry_points={
         'console_scripts':
             ['isso = isso:main'],
-    },
+    }
 )

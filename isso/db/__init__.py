@@ -2,12 +2,19 @@
 
 import sqlite3
 import logging
+import operator
+import os.path
+
+from collections import defaultdict
 
 logger = logging.getLogger("isso")
+
+from isso.compat import buffer
 
 from isso.db.comments import Comments
 from isso.db.threads import Threads
 from isso.db.spam import Guard
+from isso.db.preferences import Preferences
 
 
 class SQLite3:
@@ -17,26 +24,27 @@ class SQLite3:
     a trigger for automated orphan removal.
     """
 
-    MAX_VERSION = 1
+    MAX_VERSION = 3
 
     def __init__(self, path, conf):
 
-        self.path = path
+        self.path = os.path.expanduser(path)
         self.conf = conf
 
         rv = self.execute([
             "SELECT name FROM sqlite_master"
-            "   WHERE type='table' AND name IN ('threads', 'comments')"]
-        ).fetchall()
+            "   WHERE type='table' AND name IN ('threads', 'comments', 'preferences')"]
+        ).fetchone()
 
-        if rv:
-            self.migrate(to=SQLite3.MAX_VERSION)
-        else:
-            self.execute("PRAGMA user_version = %i" % SQLite3.MAX_VERSION)
-
+        self.preferences = Preferences(self)
         self.threads = Threads(self)
         self.comments = Comments(self)
         self.guard = Guard(self)
+
+        if rv is None:
+            self.execute("PRAGMA user_version = %i" % SQLite3.MAX_VERSION)
+        else:
+            self.migrate(to=SQLite3.MAX_VERSION)
 
         self.execute([
             'CREATE TRIGGER IF NOT EXISTS remove_stale_threads',
@@ -74,4 +82,40 @@ class SQLite3:
             with sqlite3.connect(self.path) as con:
                 con.execute('UPDATE comments SET voters=?', (bf, ))
                 con.execute('PRAGMA user_version = 1')
+                logger.info("%i rows changed", con.total_changes)
+
+        # move [general] session-key to database
+        if self.version == 1:
+
+            with sqlite3.connect(self.path) as con:
+                if self.conf.has_option("general", "session-key"):
+                    con.execute('UPDATE preferences SET value=? WHERE key=?', (
+                        self.conf.get("general", "session-key"), "session-key"))
+
+                con.execute('PRAGMA user_version = 2')
+                logger.info("%i rows changed", con.total_changes)
+
+        # limit max. nesting level to 1
+        if self.version == 2:
+
+            first = lambda rv: list(map(operator.itemgetter(0), rv))
+
+            with sqlite3.connect(self.path) as con:
+                top = first(con.execute("SELECT id FROM comments WHERE parent IS NULL").fetchall())
+                flattened = defaultdict(set)
+
+                for id in top:
+
+                    ids = [id, ]
+
+                    while ids:
+                        rv = first(con.execute("SELECT id FROM comments WHERE parent=?", (ids.pop(), )))
+                        ids.extend(rv)
+                        flattened[id].update(set(rv))
+
+                for id in flattened.keys():
+                    for n in flattened[id]:
+                        con.execute("UPDATE comments SET parent=? WHERE id=?", (id, n))
+
+                con.execute('PRAGMA user_version = 3')
                 logger.info("%i rows changed", con.total_changes)

@@ -1,4 +1,5 @@
 MANIFEST.in
+setup.cfg
 setup.py
 isso/__init__.py
 isso/compat.py
@@ -17,8 +18,10 @@ isso.egg-info/zip-safe
 isso/css/isso.css
 isso/db/__init__.py
 isso/db/comments.py
+isso/db/preferences.py
 isso/db/spam.py
 isso/db/threads.py
+isso/demo/index.html
 isso/ext/__init__.py
 isso/ext/notifications.py
 isso/js/count.dev.js
@@ -26,9 +29,11 @@ isso/js/count.min.js
 isso/js/embed.dev.js
 isso/js/embed.min.js
 isso/utils/__init__.py
-isso/utils/crypto.py
 isso/utils/html.py
 isso/utils/http.py
 isso/utils/parse.py
 isso/views/__init__.py
 isso/views/comments.py
+man/man1/isso.1
+man/man5/isso.conf.5
+share/isso.conf

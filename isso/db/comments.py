@@ -37,6 +37,12 @@ class Comments:
         Add new comment to DB and return a mapping of :attribute:`fields` and
         database values.
         """
+
+        if c.get("parent") is not None:
+            ref = self.get(c["parent"])
+            if ref.get("parent") is not None:
+                c["parent"] = ref["parent"]
+
         self.db.execute([
             'INSERT INTO comments (',
             '    tid, parent,'
@@ -91,15 +97,31 @@ class Comments:
 
         return None
 
-    def fetch(self, uri, mode=5):
+    def fetch(self, uri, mode=5, after=0, parent='any', order_by='id', limit=None):
         """
         Return comments for :param:`uri` with :param:`mode`.
         """
-        rv = self.db.execute([
-            'SELECT comments.* FROM comments INNER JOIN threads ON',
-            '    threads.uri=? AND comments.tid=threads.id AND (? | comments.mode) = ?'
-            'ORDER BY id ASC;'], (uri, mode, mode)).fetchall()
+        sql = [ 'SELECT comments.* FROM comments INNER JOIN threads ON',
+                '    threads.uri=? AND comments.tid=threads.id AND (? | comments.mode) = ?',
+                '    AND comments.created>?']
 
+        sql_args = [uri, mode, mode, after]
+
+        if parent != 'any':
+            if parent is None:
+                sql.append('AND comments.parent IS NULL')
+            else:
+                sql.append('AND comments.parent=?')
+                sql_args.append(parent)
+
+        sql.append('ORDER BY ? ASC')
+        sql_args.append(order_by)
+
+        if limit:
+            sql.append('LIMIT ?')
+            sql_args.append(limit)
+
+        rv = self.db.execute(sql, sql_args).fetchall()
         for item in rv:
             yield dict(zip(Comments.fields, item))
 
@@ -175,14 +197,32 @@ class Comments:
             return {'likes': likes + 1, 'dislikes': dislikes}
         return {'likes': likes, 'dislikes': dislikes + 1}
 
-    def count(self, uri):
+    def reply_count(self, url, mode=5, after=0):
         """
-        Return comment count for :param:`uri`.
+        Return comment count for main thread and all reply threads for one url.
         """
-        return self.db.execute([
-            'SELECT COUNT(comments.id) FROM comments INNER JOIN threads ON',
-            '    threads.uri=? AND comments.tid=threads.id AND comments.mode=1;'],
-            (uri, )).fetchone()
+
+        sql = ['SELECT comments.parent,count(*)',
+               'FROM comments INNER JOIN threads ON',
+               '   threads.uri=? AND comments.tid=threads.id AND',
+               '   (? | comments.mode = ?) AND',
+               '   comments.created > ?',
+               'GROUP BY comments.parent']
+
+        return dict(self.db.execute(sql, [url, mode, mode, after]).fetchall())
+
+    def count(self, *urls):
+        """
+        Return comment count for one ore more urls..
+        """
+
+        threads = dict(self.db.execute([
+            'SELECT threads.uri, COUNT(comments.id) FROM comments',
+            'LEFT OUTER JOIN threads ON threads.id = tid AND comments.mode = 1',
+            'GROUP BY threads.uri'
+        ]).fetchall())
+
+        return [threads.get(url, 0) for url in urls]
 
     def purge(self, delta):
         """

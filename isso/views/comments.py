@@ -1,7 +1,9 @@
 # -*- encoding: utf-8 -*-
 
+from __future__ import unicode_literals
+
+import re
 import cgi
-import json
 import time
 import hashlib
 import functools
@@ -9,6 +11,8 @@ import functools
 from itsdangerous import SignatureExpired, BadSignature
 
 from werkzeug.http import dump_cookie
+from werkzeug.wsgi import get_current_url
+from werkzeug.utils import redirect
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest, Forbidden, NotFound
@@ -16,9 +20,42 @@ from werkzeug.exceptions import BadRequest, Forbidden, NotFound
 from isso.compat import text_type as str
 
 from isso import utils, local
-from isso.utils import http, parse, html, JSONResponse as JSON
-from isso.utils.crypto import pbkdf2
+from isso.utils import http, parse, JSONResponse as JSON
 from isso.views import requires
+
+try:
+    from werkzeug.security import pbkdf2_hex
+except ImportError:
+    try:
+        from passlib.utils.pbkdf2 import pbkdf2
+    except ImportError as ex:
+        raise ImportError("No PBKDF2 implementation found. Either upgrade " +
+                          "to `werkzeug` 0.9 or install `passlib`.")
+    else:
+        import base64
+        pbkdf2_hex = lambda text, salt, iterations, dklen: base64.b16encode(
+            pbkdf2(text.encode("utf-8"), salt, iterations, dklen)).lower().decode("utf-8")
+
+# from Django appearently, looks good to me *duck*
+__url_re = re.compile(
+    r'^'
+    r'(https?://)?'
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+    r'localhost|'  # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)'
+    r'$', re.IGNORECASE)
+
+
+def isurl(text):
+    return __url_re.match(text) is not None
+
+
+def normalize(url):
+    if not url.startswith(("http://", "https://")):
+        return "http://" + url
+    return url
 
 
 def sha1(text):
@@ -51,7 +88,7 @@ def xhr(func):
 
 class API(object):
 
-    FIELDS = set(['id', 'parent', 'text', 'author', 'website', 'email',
+    FIELDS = set(['id', 'parent', 'text', 'author', 'website',
                   'mode', 'created', 'modified', 'likes', 'dislikes', 'hash'])
 
     # comment fields, that can be submitted
@@ -61,6 +98,7 @@ class API(object):
         ('fetch',   ('GET', '/')),
         ('new',     ('POST', '/new')),
         ('count',   ('GET', '/count')),
+        ('counts',  ('POST', '/count')),
         ('view',    ('GET', '/id/<int:id>')),
         ('edit',    ('PUT', '/id/<int:id>')),
         ('delete',  ('DELETE', '/id/<int:id>')),
@@ -68,7 +106,7 @@ class API(object):
         ('moderate',('POST', '/id/<int:id>/<any(activate,delete):action>/<string:key>')),
         ('like',    ('POST', '/id/<int:id>/like')),
         ('dislike', ('POST', '/id/<int:id>/dislike')),
-        ('checkip', ('GET', '/check-ip'))
+        ('demo',    ('GET', '/demo'))
     ]
 
     def __init__(self, isso):
@@ -104,10 +142,24 @@ class API(object):
         if len(comment["text"].rstrip()) < 3:
             return False, "text is too short (minimum length: 3)"
 
+        if len(comment["text"]) > 65535:
+            return False, "text is too long (maximum length: 65535)"
+
         if len(comment.get("email") or "") > 254:
             return False, "http://tools.ietf.org/html/rfc5321#section-4.5.3"
 
+        if comment.get("website"):
+            if len(comment["website"]) > 254:
+                return False, "arbitrary length limit"
+            if not isurl(comment["website"]):
+                return False, "Website not Django-conform"
+
         return True, ""
+
+    @classmethod
+    def pbkdf2(cls, text, salt, iterations, dklen):
+        # werkzeug.security.pbkdf2_hex returns always the native string type
+        return pbkdf2_hex(text.encode("utf-8"), salt, iterations, dklen)
 
     @xhr
     @requires(str, 'uri')
@@ -125,9 +177,12 @@ class API(object):
         if not valid:
             return BadRequest(reason)
 
-        for field in ("author", "email"):
+        for field in ("author", "email", "website"):
             if data.get(field) is not None:
                 data[field] = cgi.escape(data[field])
+
+        if data.get("website"):
+            data["website"] = normalize(data["website"])
 
         data['mode'] = 2 if self.moderated else 1
         data['remote_addr'] = utils.anonymize(str(request.remote_addr))
@@ -163,8 +218,8 @@ class API(object):
             value=self.isso.sign([rv["id"], sha1(rv["text"])]),
             max_age=self.conf.getint('max-age'))
 
-        rv["text"] = html.markdown(rv["text"])
-        rv["hash"] = pbkdf2(rv['email'] or rv['remote_addr'], self.isso.salt, 1000, 6).decode("utf-8")
+        rv["text"] = self.isso.render(rv["text"])
+        rv["hash"] = API.pbkdf2(rv['email'] or rv['remote_addr'], self.isso.salt, 1000, 6)
 
         self.cache.set('hash', (rv['email'] or rv['remote_addr']).encode('utf-8'), rv['hash'])
 
@@ -189,7 +244,7 @@ class API(object):
             rv.pop(key)
 
         if request.args.get('plain', '0') == '0':
-            rv['text'] = html.markdown(rv['text'])
+            rv['text'] = self.isso.render(rv['text'])
 
         return JSON(rv, 200)
 
@@ -230,7 +285,7 @@ class API(object):
                 value=self.isso.sign([rv["id"], sha1(rv["text"])]),
                 max_age=self.conf.getint('max-age'))
 
-        rv["text"] = html.markdown(rv["text"])
+        rv["text"] = self.isso.render(rv["text"])
 
         resp = JSON(rv, 200)
         resp.headers.add("Set-Cookie", cookie(str(rv["id"])))
@@ -316,17 +371,87 @@ class API(object):
     @requires(str, 'uri')
     def fetch(self, environ, request, uri):
 
-        rv = list(self.comments.fetch(uri))
-        if not rv:
-            raise NotFound
+        args = {
+            'uri': uri,
+            'after': request.args.get('after', 0)
+        }
 
-        for item in rv:
+        try:
+            args['limit'] = int(request.args.get('limit'))
+        except TypeError:
+            args['limit'] = None
+        except ValueError:
+            return BadRequest("limit should be integer")
+
+        if request.args.get('parent') is not None:
+            try:
+                args['parent'] = int(request.args.get('parent'))
+                root_id = args['parent']
+            except ValueError:
+                return BadRequest("parent should be integer")
+        else:
+            args['parent'] = None
+            root_id = None
+
+        plain = request.args.get('plain', '0') == '0'
+
+        reply_counts = self.comments.reply_count(uri, after=args['after'])
+
+        if args['limit'] == 0:
+            root_list = []
+        else:
+            root_list = list(self.comments.fetch(**args))
+            if not root_list:
+                raise NotFound
+
+        if root_id not in reply_counts:
+            reply_counts[root_id] = 0
+
+        try:
+            nested_limit = int(request.args.get('nested_limit'))
+        except TypeError:
+            nested_limit = None
+        except ValueError:
+            return BadRequest("nested_limit should be integer")
+
+        rv = {
+            'id'             : root_id,
+            'total_replies'  : reply_counts[root_id],
+            'hidden_replies' : reply_counts[root_id] - len(root_list),
+            'replies'        : self._process_fetched_list(root_list, plain)
+        }
+        # We are only checking for one level deep comments
+        if root_id is None:
+            for comment in rv['replies']:
+                if comment['id'] in reply_counts:
+                    comment['total_replies'] = reply_counts[comment['id']]
+                    if nested_limit is not None:
+                        if nested_limit > 0:
+                            args['parent'] = comment['id']
+                            args['limit'] = nested_limit
+                            replies = list(self.comments.fetch(**args))
+                        else:
+                            replies = []
+                    else:
+                        args['parent'] = comment['id']
+                        replies = list(self.comments.fetch(**args))
+                else:
+                    comment['total_replies'] = 0
+                    replies = []
+
+                comment['hidden_replies'] = comment['total_replies'] - len(replies)
+                comment['replies'] = self._process_fetched_list(replies, plain)
+
+        return JSON(rv, 200)
+
+    def _process_fetched_list(self, fetched_list, plain=False):
+        for item in fetched_list:
 
             key = item['email'] or item['remote_addr']
             val = self.cache.get('hash', key.encode('utf-8'))
 
             if val is None:
-                val = pbkdf2(key, self.isso.salt, 1000, 6).decode("utf-8")
+                val = API.pbkdf2(key, self.isso.salt, 1000, 6)
                 self.cache.set('hash', key.encode('utf-8'), val)
 
             item['hash'] = val
@@ -334,11 +459,11 @@ class API(object):
             for key in set(item.keys()) - API.FIELDS:
                 item.pop(key)
 
-        if request.args.get('plain', '0') == '0':
-            for item in rv:
-                item['text'] = html.markdown(item['text'])
+        if plain:
+            for item in fetched_list:
+                item['text'] = self.isso.render(item['text'])
 
-        return JSON(rv, 200)
+        return fetched_list
 
     @xhr
     def like(self, environ, request, id):
@@ -352,6 +477,7 @@ class API(object):
         nv = self.comments.vote(False, id, utils.anonymize(str(request.remote_addr)))
         return JSON(nv, 200)
 
+    # TODO: remove someday (replaced by :func:`counts`)
     @requires(str, 'uri')
     def count(self, environ, request, uri):
 
@@ -362,5 +488,14 @@ class API(object):
 
         return JSON(rv, 200)
 
-    def checkip(self, env, req):
-        return Response(utils.anonymize(str(req.remote_addr)), 200)
+    def counts(self, environ, request):
+
+        data = request.get_json()
+
+        if not isinstance(data, list) and not all(isinstance(x, str) for x in data):
+            raise BadRequest("JSON must be a list of URLs")
+
+        return JSON(self.comments.count(*data), 200)
+
+    def demo(self, env, req):
+        return redirect(get_current_url(env) + '/index.html')

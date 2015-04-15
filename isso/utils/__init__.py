@@ -1,21 +1,17 @@
 # -*- encoding: utf-8 -*-
 
-from __future__ import division
+from __future__ import division, unicode_literals
 
 import pkg_resources
 werkzeug = pkg_resources.get_distribution("werkzeug")
 
-import io
 import json
 import hashlib
 
-try:
-    from html.parser import HTMLParser, HTMLParseError
-except ImportError:
-    from HTMLParser import HTMLParser, HTMLParseError
-
-from werkzeug.wrappers import Request, Response
+from werkzeug.wrappers import Response
 from werkzeug.exceptions import BadRequest
+
+from isso.wsgi import Request
 
 try:
     import ipaddress
@@ -28,12 +24,6 @@ def anonymize(remote_addr):
     Anonymize IPv4 and IPv6 :param remote_addr: to /24 (zero'd)
     and /48 (zero'd).
 
-    >>> anonymize(u'12.34.56.78')  # doctest: +IGNORE_UNICODE
-    '12.34.56.0'
-    >>> anonymize(u'1234:5678:90ab:cdef:fedc:ba09:8765:4321') # doctest: +IGNORE_UNICODE
-    '1234:5678:90ab:0000:0000:0000:0000:0000'
-    >>> anonymize(u'::ffff:127.0.0.1')  # doctest: +IGNORE_UNICODE
-    '127.0.0.0'
     """
     try:
         ipv4 = ipaddress.IPv4Address(remote_addr)
@@ -120,19 +110,5 @@ class JSONResponse(Response):
 
     def __init__(self, obj, *args, **kwargs):
         kwargs["content_type"] = "application/json"
-        return super(JSONResponse, self).__init__(
+        super(JSONResponse, self).__init__(
             json.dumps(obj).encode("utf-8"), *args, **kwargs)
-
-
-def origin(hosts):
-
-    hosts = [x.rstrip("/") for x in hosts]
-
-    def func(environ):
-        for host in hosts:
-            if environ.get("HTTP_ORIGIN", None) == host:
-                return host
-        else:
-            return hosts[0]
-
-    return func
