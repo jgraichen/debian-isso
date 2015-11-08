@@ -1,3 +1,9 @@
+isso (0.9.10-1) jessie; urgency=low
+
+  * Fix log permissions issues #10
+
+ -- Jocelyn Delalande <debian@hackriculture.fr>  Fri, 8 Nov 2015 15:53:23 +0200
+
 isso (0.9.10) jessie; urgency=low
 
   * Imported Upstream version 0.9.10

@@ -18,6 +18,9 @@ case $1 in
 	    if [ -x /bin/systemctl ]; then
 	      systemctl enable isso.service >/dev/null 2>&1 || true
 	    fi
+        # Fix permissions
+        touch /var/log/isso.log
+        chown isso /var/log/isso.log
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
