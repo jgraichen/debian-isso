@@ -1,3 +1,9 @@
+isso (0.9.1) jessie; urgency=low
+
+  * Imported Upstream version 0.9.1
+
+ -- Jocelyn Delalande <debian@hackriculture.fr>  Fri, 15 Apr 2015 22:22:22 +0200
+
 isso (0.8.3-1) UNRELEASED; urgency=low
 
   * Move systemd bind to socket definition.
