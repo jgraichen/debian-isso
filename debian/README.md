@@ -6,6 +6,8 @@ Debian package for [isso comments server](https://github.com/posativ/isso/).
 
 First you need to install `dpkg-dev` package.
 
+    # apt-get install python-all debhelper dpkg-dev
+
 Then do quickly a build for your own use (produce only unsigned binary package for your arch):
 
     $ dpkg-buildpackage -rfakeroot -uc -b
@@ -55,4 +57,3 @@ Update upstream source (from pypi releases):
 * Test package on ubuntu(s)
 * Test systemd script
 * Add upstart script
-
