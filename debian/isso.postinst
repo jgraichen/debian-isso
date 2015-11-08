@@ -21,6 +21,7 @@ case $1 in
         # Fix permissions
         touch /var/log/isso.log
         chown isso /var/log/isso.log
+        chown isso /var/lib/isso
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
