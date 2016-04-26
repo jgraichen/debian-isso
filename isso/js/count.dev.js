@@ -1,5 +1,6 @@
-(function () {/**
- * @license almond 0.2.9 Copyright (c) 2011-2014, The Dojo Foundation All Rights Reserved.
+(function () {
+/**
+ * @license almond 0.3.1 Copyright (c) 2011-2014, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/almond for details
  */
@@ -44,12 +45,6 @@ var requirejs, require, define;
             //otherwise, assume it is a top-level require that will
             //be relative to baseUrl in the end.
             if (baseName) {
-                //Convert baseName to array, and lop off the last part,
-                //so that . matches that "directory" and not name of the baseName's
-                //module. For instance, baseName of "one/two/three", maps to
-                //"one/two/three.js", but we want the directory, "one/two" for
-                //this normalization.
-                baseParts = baseParts.slice(0, baseParts.length - 1);
                 name = name.split('/');
                 lastIndex = name.length - 1;
 
@@ -58,7 +53,11 @@ var requirejs, require, define;
                     name[lastIndex] = name[lastIndex].replace(jsSuffixRegExp, '');
                 }
 
-                name = baseParts.concat(name);
+                //Lop off the last part of baseParts, so that . matches the
+                //"directory" and not name of the baseName's module. For instance,
+                //baseName of "one/two/three", maps to "one/two/three.js", but we
+                //want the directory, "one/two" for this normalization.
+                name = baseParts.slice(0, baseParts.length - 1).concat(name);
 
                 //start trimDots
                 for (i = 0; i < name.length; i += 1) {
@@ -150,7 +149,15 @@ var requirejs, require, define;
             //A version of a require function that passes a moduleName
             //value for items that may need to
             //look up paths relative to the moduleName
-            return req.apply(undef, aps.call(arguments, 0).concat([relName, forceSync]));
+            var args = aps.call(arguments, 0);
+
+            //If first arg is not require('string'), and there is only
+            //one arg, it is the array form without a callback. Insert
+            //a null so that the following concat is correct.
+            if (typeof args[0] !== 'string' && args.length === 1) {
+                args.push(null);
+            }
+            return req.apply(undef, args.concat([relName, forceSync]));
         };
     }
 
@@ -400,6 +407,9 @@ var requirejs, require, define;
     requirejs._defined = defined;
 
     define = function (name, deps, callback) {
+        if (typeof name !== 'string') {
+            throw new Error('See almond README: incorrect module build, no module name');
+        }
 
         //This module may not have dependencies
         if (!deps.splice) {
@@ -424,7 +434,7 @@ define("components/almond/almond", function(){});
 
 define('app/lib/ready',[],function() {
 
-    
+    "use strict";
 
     var loaded = false;
     var once = function(callback) {
@@ -452,7 +462,7 @@ define('app/lib/ready',[],function() {
 });
 define('app/lib/promise',[],function() {
 
-    
+    "use strict";
 
     var stderr = function(text) { console.log(text); };
 
@@ -509,7 +519,7 @@ define('app/lib/promise',[],function() {
 });
 
 define('app/globals',[],function() {
-    
+    "use strict";
 
     var Offset = function() {
         this.values = [];
@@ -531,7 +541,7 @@ define('app/globals',[],function() {
 });
 define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
-    
+    "use strict";
 
     var salt = "Eech7co8Ohloopo9Ol6baimi",
         location = window.location.pathname;
@@ -583,7 +593,9 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
             }
 
             if (xhr.status >= 500) {
-                reject(xhr.body);
+                if (reject) {
+                    reject(xhr.body);
+                }
             } else {
                 resolve({status: xhr.status, body: xhr.responseText});
             }
@@ -621,7 +633,13 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
     var create = function(tid, data) {
         var deferred = Q.defer();
         curl("POST", endpoint + "/new?" + qs({uri: tid || location}), JSON.stringify(data),
-            function (rv) { deferred.resolve(JSON.parse(rv.body)); });
+            function (rv) {
+                if (rv.status === 201 || rv.status === 202) {
+                    deferred.resolve(JSON.parse(rv.body));
+                } else {
+                    deferred.reject(rv.body);
+                }
+            });
         return deferred.promise;
     };
 
@@ -731,103 +749,137 @@ define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
 define('app/dom',[],function() {
 
-    
+    "use strict";
 
-    window.Element.prototype.replace = function(el) {
-        var element = DOM.htmlify(el);
-        this.parentNode.replaceChild(element, this);
-        return element;
-    };
+    function Element(node) {
+        this.obj = node;
 
-    window.Element.prototype.prepend = function(el) {
-        var element = DOM.htmlify(el);
-        this.insertBefore(element, this.firstChild);
-        return element;
-    };
+        this.replace = function (el) {
+            var element = DOM.htmlify(el);
+            node.parentNode.replaceChild(element.obj, node);
+            return element;
+        };
 
-    window.Element.prototype.append = function(el) {
-        var element = DOM.htmlify(el);
-        this.appendChild(element);
-        return element;
-    };
+        this.prepend = function (el) {
+            var element = DOM.htmlify(el);
+            node.insertBefore(element.obj, node.firstChild);
+            return element;
+        };
 
-    window.Element.prototype.insertAfter = function(el) {
-        var element = DOM.htmlify(el);
-        this.parentNode.insertBefore(element, this.nextSibling);
-        return element;
-    };
+        this.append = function (el) {
+            var element = DOM.htmlify(el);
+            node.appendChild(element.obj);
+            return element;
+        };
 
-    window.Element.prototype.on = function(type, listener, prevent) {
-        /*
-        Shortcut for `Element.addEventListener`, prevents default event
-        by default, set :param prevents: to `false` to change that behavior.
+        this.insertAfter = function(el) {
+            var element = DOM.htmlify(el);
+            node.parentNode.insertBefore(element.obj, node.nextSibling);
+            return element;
+        };
+
+        /**
+         * Shortcut for `Element.addEventListener`, prevents default event
+         * by default, set :param prevents: to `false` to change that behavior.
          */
-        this.addEventListener(type, function(event) {
-            listener(event);
-            if (prevent === undefined || prevent) {
-                event.preventDefault();
+        this.on = function(type, listener, prevent) {
+            node.addEventListener(type, function(event) {
+                listener(event);
+                if (prevent === undefined || prevent) {
+                    event.preventDefault();
+                }
+            });
+        };
+
+        /**
+         * Toggle between two internal states on event :param type: e.g. to
+         * cycle form visibility. Callback :param a: is called on first event,
+         * :param b: next time.
+         *
+         * You can skip to the next state without executing the callback with
+         * `toggler.next()`. You can prevent a cycle when you call `toggler.wait()`
+         * during an event.
+         */
+        this.toggle = function(type, a, b) {
+
+            var toggler = new Toggle(a, b);
+            this.on(type, function() {
+                toggler.next();
+            });
+        };
+
+        this.detach = function() {
+            // Detach an element from the DOM and return it.
+            node.parentNode.removeChild(this.obj);
+            return this;
+        };
+
+        this.remove = function() {
+            // IE quirks
+            node.parentNode.removeChild(this.obj);
+        };
+
+        this.show = function() {
+            node.style.display = "block";
+        };
+
+        this.hide = function() {
+            node.style.display = "none";
+        };
+
+        this.setText = function(text) {
+            node.textContent = text;
+        };
+
+        this.setHtml = function(html) {
+            node.innerHTML = html;
+        };
+
+        this.blur = function() { node.blur() };
+        this.focus = function() { node.focus() };
+        this.scrollIntoView = function(args) { node.scrollIntoView(args) };
+
+        this.setAttribute = function(key, value) { node.setAttribute(key, value) };
+        this.getAttribute = function(key) { return node.getAttribute(key) };
+
+        this.classList = node.classList;
+
+        Object.defineProperties(this, {
+            "textContent": {
+                get: function() { return node.textContent; },
+                set: function(textContent) { node.textContent = textContent; }
+            },
+            "innerHTML": {
+                get: function() { return node.innerHTML; },
+                set: function(innerHTML) { node.innerHTML = innerHTML; }
+            },
+            "value": {
+                get: function() { return node.value; },
+                set: function(value) { node.value = value; }
+            },
+            "placeholder": {
+                get: function() { return node.placeholder; },
+                set: function(placeholder) { node.placeholder = placeholder; }
             }
         });
-    };
+    }
 
-    window.Element.prototype.toggle = function(type, a, b) {
-        /*
-        Toggle between two internal states on event :param type: e.g. to
-        cycle form visibility. Callback :param a: is called on first event,
-        :param b: next time.
+    var Toggle = function(a, b) {
+        this.state = false;
 
-        You can skip to the next state without executing the callback with
-        `toggler.next()`. You can prevent a cycle when you call `toggler.wait()`
-        during an event.
-         */
-
-        function Toggle(el, a, b) {
-            this.state = false;
-            this.el = el;
-            this.a = a;
-            this.b = b;
-        }
-
-        Toggle.prototype.next = function next() {
+        this.next = function() {
             if (! this.state) {
                 this.state = true;
-                this.a(this);
+                a(this);
             } else {
                 this.state = false;
-                this.b(this);
+                b(this);
             }
         };
 
-        Toggle.prototype.wait = function wait() {
+        this.wait = function() {
             this.state = ! this.state;
         };
-
-        var toggler = new Toggle(this, a, b);
-        this.on(type, function() {
-            toggler.next();
-        });
-    };
-
-    window.Element.prototype.detach = function() {
-        /*
-        Detach an element from the DOM and return it.
-         */
-
-        this.parentNode.removeChild(this);
-        return this;
-    };
-
-    window.Element.prototype.remove = function() {
-        // Mimimi, I am IE and I am so retarded, mimimi.
-        this.parentNode.removeChild(this);
-    };
-
-    window.Element.prototype.show = function() {
-        this.style.display = "block";
-    };
-
-    window.Element.prototype.hide = function() {
-        this.style.display = "none";
     };
 
     var DOM = function(query, root, single) {
@@ -846,31 +898,43 @@ define('app/dom',[],function() {
             root = window.document;
         }
 
-        var elements = root.querySelectorAll(query);
+        if (root instanceof Element) {
+            root = root.obj;
+        }
+        var elements = [].slice.call(root.querySelectorAll(query), 0);
 
         if (elements.length === 0) {
             return null;
         }
 
         if (elements.length === 1 && single) {
-            return elements[0];
+            return new Element(elements[0]);
         }
 
-        return elements;
+        // convert NodeList to Array
+        elements = [].slice.call(elements, 0);
+
+        return elements.map(function(el) {
+            return new Element(el);
+        });
     };
 
-    DOM.htmlify = function(html) {
+    DOM.htmlify = function(el) {
         /*
         Convert :param html: into an Element (if not already).
-         */
+        */
 
-        if (html instanceof window.Element) {
-            return html;
+        if (el instanceof Element) {
+            return el;
+        }
+
+        if (el instanceof window.Element) {
+            return new Element(el);
         }
 
         var wrapper = DOM.new("div");
-        wrapper.innerHTML = html;
-        return wrapper.firstChild;
+        wrapper.innerHTML = el;
+        return new Element(wrapper.firstChild);
     };
 
     DOM.new = function(tag, content) {
@@ -905,13 +969,15 @@ define('app/dom',[],function() {
 
     return DOM;
 });
+
 define('app/config',[],function() {
-    
+    "use strict";
 
     var config = {
         "css": true,
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
         "reply-to-self": false,
+        "require-email": false,
         "max-comments-top": "inf",
         "max-comments-nested": 5,
         "reveal-on-click": 5,
@@ -942,6 +1008,34 @@ define('app/config',[],function() {
 
     return config;
 
+});
+
+define('app/i18n/cs',{
+    "postbox-text": "Sem napiště svůj komentář (nejméně 3 znaky)",
+    "postbox-author": "Jméno (nepovinné)",
+    "postbox-email": "E-mail (nepovinný)",
+    "postbox-website": "Web (nepovinný)",
+    "postbox-submit": "Publikovat",
+    "num-comments": "Jeden komentář\n{{ n }} Komentářů",
+    "no-comments": "Zatím bez komentářů",
+    "comment-reply": "Odpovědět",
+    "comment-edit": "Upravit",
+    "comment-save": "Uložit",
+    "comment-delete": "Smazat",
+    "comment-confirm": "Potvrdit",
+    "comment-close": "Zavřít",
+    "comment-cancel": "Zrušit",
+    "comment-deleted": "Komentář smazán",
+    "comment-queued": "Komentář ve frontě na schválení",
+    "comment-anonymous": "Anonym",
+    "comment-hidden": "{{ n }} skryto",
+    "date-now": "právě teď",
+    "date-minute": "před minutou\npřed {{ n }} minutami",
+    "date-hour": "před hodinou\npřed {{ n }} hodinami",
+    "date-day": "včera\npřed {{ n }} dny",
+    "date-week": "minulý týden\npřed {{ n }} týdny",
+    "date-month": "minulý měsíc\npřed {{ n }} měsíci",
+    "date-year": "minulý rok\npřed {{ n }} lety"
 });
 
 define('app/i18n/de',{
@@ -1031,30 +1125,60 @@ define('app/i18n/fr',{
     "date-year": "Il y a un an\nIl y a {{ n }} ans"
 });
 
+define('app/i18n/hr',{
+    "postbox-text": "Napiši komentar ovdje (najmanje 3 znaka)",
+    "postbox-author": "Ime (neobavezno)",
+    "postbox-email": "E-mail (neobavezno)",
+    "postbox-website": "Web stranica (neobavezno)",
+    "postbox-submit": "Pošalji",
+    "num-comments": "Jedan komentar\n{{ n }} komentara",
+    "no-comments": "Još nema komentara",
+    "comment-reply": "Odgovori",
+    "comment-edit": "Uredi",
+    "comment-save": "Spremi",
+    "comment-delete": "Obriši",
+    "comment-confirm": "Potvrdi",
+    "comment-close": "Zatvori",
+    "comment-cancel": "Odustani",
+    "comment-deleted": "Komentar obrisan",
+    "comment-queued": "Komentar u redu za provjeru.",
+    "comment-anonymous": "Anonimno",
+    "comment-hidden": "{{ n }} Skrivenih",
+    "date-now": "upravo",
+    "date-minute": "prije minutu\nprije {{ n }} minuta",
+    "date-hour": "prije sat vremena\nprije {{ n }} sati",
+    "date-day": "jučer\nprije {{ n }} dana",
+    "date-week": "prošli tjedan\nprije {{ n }} tjedana",
+    "date-month": "prošli mjesec\nprije {{ n }} mjeseci",
+    "date-year": "prošle godine\nprije {{ n }} godina"
+});
+
 define('app/i18n/ru',{
-    "postbox-text": "Комментировать здесь  (минимум 3 символа)",
+    "postbox-text": "Оставить комментарий (минимум 3 символа)",
     "postbox-author": "Имя (необязательно)",
     "postbox-email": "Email (необязательно)",
+    "postbox-website": "Сайт (необязательно)",
     "postbox-submit": "Отправить",
-    "num-comments": "1 Комментарий\n{{ n }} Комментарии",
-    "no-comments": "Нет Комментарев",
+    "num-comments": "1 комментарий\n{{ n }} комментария\n{{ n }} комментариев",
+    "no-comments": "Оставить комментарий",
     "comment-reply": "Ответить",
     "comment-edit": "Правка",
     "comment-save": "Сохранить",
     "comment-delete": "Удалить",
-    "comment-confirm": "Подтвердить",
+    "comment-confirm": "Подтвердить удаление",
     "comment-close": "Закрыть",
     "comment-cancel": "Отменить",
-    "comment-deleted": "Удалить комментарий",
-    "comment-queued": "Комментарий должен быть разблокирован",
-    "comment-anonymous": "Анонимный",
-    "date-now": "Сейчас",
-    "date-minute": "Минут назад\n{{ n }} минут",
-    "date-hour": "Час назад\n{{ n }} часов",
-    "date-day": "Вчера\n{{ n }} дней",
-    "date-week": "на прошлой недели\n{{ n }} недель",
-    "date-month": "в прошоим месяце\n{{ n }} месяцов",
-    "date-year": "в прошлом году\n{{ n }} года\n{{ n }} лет"
+    "comment-deleted": "Комментарий удалён",
+    "comment-queued": "Комментарий будет проверен модератором",
+    "comment-anonymous": "Аноним",
+    "comment-hidden": "Показать ещё 1 комментарий\nПоказать ещё {{ n }} комментария\nПоказать ещё {{ n }} комментариев",
+    "date-now": "Только что",
+    "date-minute": "{{ n }} минуту назад\n{{ n }} минуты назад\n{{ n }} минут назад",
+    "date-hour": "{{ n }} час назад\n{{ n }} часа назад\n{{ n }} часов назад",
+    "date-day": "{{ n }} день назад\n{{ n }} дня назад\n{{ n }} дней назад",
+    "date-week": "{{ n }} неделю назад\n{{ n }} недели назад\n{{ n }} недель назад",
+    "date-month": "{{ n }} месяц назад\n{{ n }} месяца назад\n{{ n }} месяцев назад",
+    "date-year": "{{ n }} год назад\n{{ n }} года назад\n{{ n }} лет назад"
 });
 
 define('app/i18n/it',{
@@ -1113,16 +1237,202 @@ define('app/i18n/eo',{
     "date-year": "lasta jaro\nantaŭ {{ n }} jaroj"
 });
 
-define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "app/i18n/ru", "app/i18n/it", "app/i18n/eo"], function(config, de, en, fr, ru, it, eo) {
+define('app/i18n/sv',{
+    "postbox-text": "Skriv din kommentar här (minst 3 tecken)",
+    "postbox-author": "Namn (frivilligt)",
+    "postbox-email": "E-mail (frivilligt)",
+    "postbox-website": "Hemsida (frivilligt)",
+    "postbox-submit": "Skicka",
+    "num-comments": "En kommentar\n{{ n }} kommentarer",
+    "no-comments": "Inga kommentarer än",
+    "comment-reply": "Svara",
+    "comment-edit": "Redigera",
+    "comment-save": "Spara",
+    "comment-delete": "Radera",
+    "comment-confirm": "Bekräfta",
+    "comment-close": "Stäng",
+    "comment-cancel": "Avbryt",
+    "comment-deleted": "Kommentar raderad.",
+    "comment-queued": "Kommentaren inväntar granskning.",
+    "comment-anonymous": "Anonym",
+    "comment-hidden": "{{ n }} Gömd",
+    "date-now": "just nu",
+    "date-minute": "en minut sedan\n{{ n }} minuter sedan",
+    "date-hour": "en timme sedan\n{{ n }} timmar sedan",
+    "date-day": "igår\n{{ n }} dagar sedan",
+    "date-week": "förra veckan\n{{ n }} veckor sedan",
+    "date-month": "förra månaden\n{{ n }} månader sedan",
+    "date-year": "förra året\n{{ n }} år sedan"
+});
 
-    
+define('app/i18n/nl',{
+    "postbox-text": "Typ reactie hier (minstens 3 karakters)",
+    "postbox-author": "Naam (optioneel)",
+    "postbox-email": "E-mail (optioneel)",
+    "postbox-website": "Website (optioneel)",
+    "postbox-submit": "Versturen",
+    "num-comments": "Één reactie\n{{ n }} reacties",
+    "no-comments": "Nog geen reacties",
+    "comment-reply": "Beantwoorden",
+    "comment-edit": "Bewerken",
+    "comment-save": "Opslaan",
+    "comment-delete": "Verwijderen",
+    "comment-confirm": "Bevestigen",
+    "comment-close": "Sluiten",
+    "comment-cancel": "Annuleren",
+    "comment-deleted": "Reactie verwijderd.",
+    "comment-queued": "Reactie staat in de wachtrij voor goedkeuring.",
+    "comment-anonymous": "Anoniem",
+    "comment-hidden": "{{ n }} verborgen",
+    "date-now": "zojuist",
+    "date-minute": "een minuut geleden\n{{ n }} minuten geleden",
+    "date-hour": "een uur geleden\n{{ n }} uur geleden",
+    "date-day": "gisteren\n{{ n }} dagen geleden",
+    "date-week": "vorige week\n{{ n }} weken geleden",
+    "date-month": "vorige maand\n{{ n }} maanden geleden",
+    "date-year": "vorig jaar\n{{ n }} jaar geleden"
+});
+
+define('app/i18n/el_GR',{
+    "postbox-text": "Γράψτε το σχόλιο εδώ (τουλάχιστον 3 χαρακτήρες)",
+    "postbox-author": "Όνομα (προαιρετικό)",
+    "postbox-email": "E-mail (προαιρετικό)",
+    "postbox-website": "Ιστοσελίδα (προαιρετικό)",
+    "postbox-submit": "Υποβολή",
+    "num-comments": "Ένα σχόλιο\n{{ n }} σχόλια",
+    "no-comments": "Δεν υπάρχουν σχόλια",
+    "comment-reply": "Απάντηση",
+    "comment-edit": "Επεξεργασία",
+    "comment-save": "Αποθήκευση",
+    "comment-delete": "Διαγραφή",
+    "comment-confirm": "Επιβεβαίωση",
+    "comment-close": "Κλείσιμο",
+    "comment-cancel": "Ακύρωση",
+    "comment-deleted": "Διαγραμμένο σχόλιο ",
+    "comment-queued": "Το σχόλιο αναμένει έγκριση",
+    "comment-anonymous": "Ανώνυμος",
+    "comment-hidden": "{{ n }} Κρυμμένα",
+    "date-now": "τώρα",
+    "date-minute": "πριν ένα λεπτό\nπριν {{ n }} λεπτά",
+    "date-hour": "πριν μία ώρα\nπριν {{ n }} ώρες",
+    "date-day": "Χτες\nπριν {{ n }} μέρες",
+    "date-week": "την προηγούμενη εβδομάδα\nπριν {{ n }} εβδομάδες",
+    "date-month": "τον προηγούμενο μήνα\nπριν {{ n }} μήνες",
+    "date-year": "πέρυσι\nπριν {{ n }} χρόνια"
+});
+
+define('app/i18n/es',{
+    "postbox-text": "Escriba su comentario aquí (al menos 3 caracteres)",
+    "postbox-author": "Nombre (opcional)",
+    "postbox-email": "E-mail (opcional)",
+    "postbox-website": "Sitio web (opcional)",
+    "postbox-submit": "Enviar",
+    "num-comments": "Un Comentario\n{{ n }} Comentarios",
+    "no-comments": "Sin Comentarios Todavía",
+    "comment-reply": "Responder",
+    "comment-edit": "Editar",
+    "comment-save": "Guardar",
+    "comment-delete": "Eliminar",
+    "comment-confirm": "Confirmar",
+    "comment-close": "Cerrar",
+    "comment-cancel": "Cancelar",
+    "comment-deleted": "Comentario eliminado.",
+    "comment-queued": "Comentario en espera para moderación.",
+    "comment-anonymous": "Anónimo",
+    "comment-hidden": "{{ n }} Oculto(s)",
+    "date-now": "ahora",
+    "date-minute": "hace un minuto\nhace {{ n }} minutos",
+    "date-hour": "hace una hora\nhace {{ n }} horas",
+    "date-day": "ayer\nHace {{ n }} días",
+    "date-week": "la semana pasada\nhace {{ n }} semanas",
+    "date-month": "el mes pasado\nhace {{ n }} meses",
+    "date-year": "el año pasado\nhace {{ n }} años"
+});
+
+define('app/i18n/vi',{
+    "postbox-text": "Nhập bình luận tại đây (tối thiểu 3 ký tự)",
+    "postbox-author": "Tên (tùy chọn)",
+    "postbox-email": "E-mail (tùy chọn)",
+    "postbox-website": "Website (tùy chọn)",
+    "postbox-submit": "Gửi",
+
+    "num-comments": "Một bình luận\n{{ n }} bình luận",
+    "no-comments": "Chưa có bình luận nào",
+
+    "comment-reply": "Trả lời",
+    "comment-edit": "Sửa",
+    "comment-save": "Lưu",
+    "comment-delete": "Xóa",
+    "comment-confirm": "Xác nhận",
+    "comment-close": "Đóng",
+    "comment-cancel": "Hủy",
+    "comment-deleted": "Đã xóa bình luận.",
+    "comment-queued": "Bình luận đang chờ duyệt",
+    "comment-anonymous": "Nặc danh",
+    "comment-hidden": "{{ n }} đã ẩn",
+
+    "date-now": "vừa mới",
+    "date-minute": "một phút trước\n{{ n }} phút trước",
+    "date-hour": "một giờ trước\n{{ n }} giờ trước",
+    "date-day": "Hôm qua\n{{ n }} ngày trước",
+    "date-week": "Tuần qua\n{{ n }} tuần trước",
+    "date-month": "Tháng trước\n{{ n }} tháng trước",
+    "date-year": "Năm trước\n{{ n }} năm trước"
+});
+
+define('app/i18n/zh_CN',{
+    "postbox-text": "在此输入评论(最少3个字符)",
+    "postbox-author": "名字(可选)",
+    "postbox-email": "E-mail(可选)",
+    "postbox-website": "网站(可选)",
+    "postbox-submit": "提交",
+
+    "num-comments": "1条评论\n{{ n }}条评论",
+    "no-comments": "还没有评论",
+
+    "comment-reply": "回复",
+    "comment-edit": "编辑",
+    "comment-save": "保存",
+    "comment-delete": "删除",
+    "comment-confirm": "确认",
+    "comment-close": "关闭",
+    "comment-cancel": "取消",
+    "comment-deleted": "评论已删除.",
+    "comment-queued": "评论待审核.",
+    "comment-anonymous": "匿名",
+    "comment-hidden": "{{ n }} 条评论已隐藏",
+
+    "date-now": "刚刚",
+    "date-minute": "1分钟前\n{{ n }}分钟前",
+    "date-hour": "1小时前\n{{ n }}小时前",
+    "date-day": "昨天\n{{ n }}天前",
+    "date-week": "上周\n{{ n }}周前",
+    "date-month": "上个月\n{{ n }}个月前",
+    "date-year": "去年\n{{ n }}年前"
+});
+
+define('app/i18n',["app/config", "app/i18n/cs", "app/i18n/de", "app/i18n/en",
+        "app/i18n/fr", "app/i18n/hr", "app/i18n/ru", "app/i18n/it",
+        "app/i18n/eo", "app/i18n/sv", "app/i18n/nl", "app/i18n/el_GR",
+        "app/i18n/es", "app/i18n/vi", "app/i18n/zh_CN"],
+        function(config, cs, de, en, fr, hr, ru, it, eo, sv, nl, el, es, vi, zh) {
+
+    "use strict";
 
     var pluralforms = function(lang) {
         switch (lang) {
-        case "en":
+        case "cs":
         case "de":
-        case "it":
+        case "el":
+        case "en":
+        case "es":
         case "eo":
+        case "hr":
+        case "it":
+        case "sv":
+        case "nl":
+        case "vi":
+        case "zh":
             return function(msgs, n) {
                 return msgs[n === 1 ? 0 : 1];
             };
@@ -1154,12 +1464,20 @@ define('app/i18n',["app/config", "app/i18n/de", "app/i18n/en", "app/i18n/fr", "a
     }
 
     var catalogue = {
+        cs: cs,
         de: de,
+        el: el,
         en: en,
+        eo: eo,
+        es: es,
         fr: fr,
-        ru: ru,
         it: it,
-        eo: eo
+        hr: hr,
+        ru: ru,
+        sv: sv,
+        nl: nl,
+        vi: vi,
+        zh: zh
     };
 
     var plural = pluralforms(lang);

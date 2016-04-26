@@ -60,8 +60,8 @@ def urlsplit(name):
 
     rv = urlparse(name)
     if rv.scheme == 'https' and rv.port is None:
-        return (rv.netloc, 443, True)
-    return (rv.netloc.rsplit(':')[0], rv.port or 80, rv.scheme == 'https')
+        return rv.netloc, 443, True
+    return rv.netloc.rsplit(':')[0], rv.port or 80, rv.scheme == 'https'
 
 
 def urljoin(netloc, port, ssl):
@@ -124,7 +124,7 @@ class CORSMiddleware(object):
 
     methods = ("HEAD", "GET", "POST", "PUT", "DELETE")
 
-    def __init__(self, app, origin, allowed=[], exposed=[]):
+    def __init__(self, app, origin, allowed=None, exposed=None):
         self.app = app
         self.origin = origin
         self.allowed = allowed
@@ -144,8 +144,8 @@ class CORSMiddleware(object):
             return start_response(status, headers.to_list(), exc_info)
 
         if environ.get("REQUEST_METHOD") == "OPTIONS":
-            add_cors_headers(b"200 Ok", [("Content-Type", "text/plain")])
-            return [b'200 Ok']
+            add_cors_headers("200 Ok", [("Content-Type", "text/plain")])
+            return []
 
         return self.app(environ, add_cors_headers)
 

@@ -3,7 +3,9 @@ setup.cfg
 setup.py
 isso/__init__.py
 isso/compat.py
+isso/config.py
 isso/core.py
+isso/defaults.ini
 isso/dispatch.py
 isso/migrate.py
 isso/run.py
@@ -12,16 +14,14 @@ isso.egg-info/PKG-INFO
 isso.egg-info/SOURCES.txt
 isso.egg-info/dependency_links.txt
 isso.egg-info/entry_points.txt
+isso.egg-info/not-zip-safe
 isso.egg-info/requires.txt
 isso.egg-info/top_level.txt
-isso.egg-info/zip-safe
-isso/css/isso.css
 isso/db/__init__.py
 isso/db/comments.py
 isso/db/preferences.py
 isso/db/spam.py
 isso/db/threads.py
-isso/demo/index.html
 isso/ext/__init__.py
 isso/ext/notifications.py
 isso/js/count.dev.js
@@ -29,6 +29,7 @@ isso/js/count.min.js
 isso/js/embed.dev.js
 isso/js/embed.min.js
 isso/utils/__init__.py
+isso/utils/hash.py
 isso/utils/html.py
 isso/utils/http.py
 isso/utils/parse.py
