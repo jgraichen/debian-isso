@@ -1,3 +1,9 @@
+isso (0.10.4-1) jessie; urgency=low
+
+  * Imported Upstream version 0.10.4
+
+ -- Jocelyn Delalande <jocelyn@crapouillou.net>  Tue, 26 Apr 2016 16:53:23 +0200
+
 isso (0.9.10-1) jessie; urgency=low
 
   * Fix log permissions issues #10
