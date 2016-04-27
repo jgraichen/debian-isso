@@ -2,6 +2,8 @@
 
 Debian package for [isso comments server](https://github.com/posativ/isso/).
 
+*N.B. if you want a debian repository with pre-built packages for amd64 arch, please check https://packages.crapouillou.net*
+
 ## Quick build
 
 First you need to install `dpkg-dev` package.
