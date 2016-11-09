@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "ISSO.CONF" "5" "Apr 12, 2016" "0.10" "Isso"
+.TH "ISSO.CONF" "5" "Sep 20, 2016" "0.10" "Isso"
 .SH NAME
 isso.conf \- server configuration
 .
@@ -301,6 +301,7 @@ enabled = true
 ratelimit = 2
 direct\-reply = 3
 reply\-to\-self = false
+require\-author = false
 require\-email = false
 .ft P
 .fi
@@ -325,6 +326,12 @@ the comment. After the editing timeframe is gone, commenters can reply to
 their own comments anyways.
 .sp
 Do not forget to configure the client.
+.TP
+.B require\-author
+force commenters to enter a value into the author field. No validation is
+performed on the provided value.
+.sp
+Do not forget to configure the client accordingly.
 .TP
 .B require\-email
 force commenters to enter a value into the email field. No validation is

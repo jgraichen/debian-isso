@@ -468,6 +468,7 @@ define('app/config',[],function() {
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
         "reply-to-self": false,
         "require-email": false,
+        "require-author": false,
         "max-comments-top": "inf",
         "max-comments-nested": 5,
         "reveal-on-click": 5,
@@ -475,7 +476,8 @@ define('app/config',[],function() {
         "avatar-bg": "#f0f0f0",
         "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
                       "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" "),
-        "vote": true
+        "vote": true,
+        "vote-levels": null
     };
 
     var js = document.getElementsByTagName("script");
@@ -498,6 +500,34 @@ define('app/config',[],function() {
 
     return config;
 
+});
+
+define('app/i18n/bg',{
+    "postbox-text": "Въведете коментара си тук (поне 3 знака)",
+    "postbox-author": "Име/псевдоним (незадължително)",
+    "postbox-email": "Ел. поща (незадължително)",
+    "postbox-website": "Уебсайт (незадължително)",
+    "postbox-submit": "Публикуване",
+    "num-comments": "1 коментар\n{{ n }} коментара",
+    "no-comments": "Все още няма коментари",
+    "comment-reply": "Отговор",
+    "comment-edit": "Редактиране",
+    "comment-save": "Запис",
+    "comment-delete": "Изтриване",
+    "comment-confirm": "Потвърждение",
+    "comment-close": "Затваряне",
+    "comment-cancel": "Отказ",
+    "comment-deleted": "Коментарът е изтрит.",
+    "comment-queued": "Коментарът чака на опашката за модериране.",
+    "comment-anonymous": "анонимен",
+    "comment-hidden": "{{ n }} скрити",
+    "date-now": "сега",
+    "date-minute": "преди 1 минута\nпреди {{ n }} минути",
+    "date-hour": "преди 1 час\nпреди {{ n }} часа",
+    "date-day": "вчера\nпреди {{ n }} дни",
+    "date-week": "миналата седмица\nпреди {{ n }} седмици",
+    "date-month": "миналия месец\nпреди {{ n }} месеца",
+    "date-year": "миналата година\nпреди {{ n }} години"
 });
 
 define('app/i18n/cs',{
@@ -587,6 +617,37 @@ define('app/i18n/en',{
     "date-year": "last year\n{{ n }} years ago"
 });
 
+define('app/i18n/fi',{
+    "postbox-text": "Kirjoita kommentti tähän (vähintään 3 merkkiä)",
+    "postbox-author": "Nimi (valinnainen)",
+    "postbox-email": "Sähköposti (valinnainen)",
+    "postbox-website": "Web-sivu (valinnainen)",
+    "postbox-submit": "Lähetä",
+
+    "num-comments": "Yksi kommentti\n{{ n }} kommenttia",
+    "no-comments": "Ei vielä kommentteja",
+
+    "comment-reply": "Vastaa",
+    "comment-edit": "Muokkaa",
+    "comment-save": "Tallenna",
+    "comment-delete": "Poista",
+    "comment-confirm": "Vahvista",
+    "comment-close": "Sulje",
+    "comment-cancel": "Peru",
+    "comment-deleted": "Kommentti on poistettu.",
+    "comment-queued": "Kommentti on laitettu jonoon odottamaan moderointia.",
+    "comment-anonymous": "Nimetön",
+    "comment-hidden": "{{ n }} piilotettua",
+
+    "date-now": "hetki sitten",
+    "date-minute": "minuutti sitten\n{{ n }} minuuttia sitten",
+    "date-hour": "tunti sitten\n{{ n }} tuntia sitten",
+    "date-day": "eilen\n{{ n }} päivää sitten",
+    "date-week": "viime viikolla\n{{ n }} viikkoa sitten",
+    "date-month": "viime kuussa\n{{ n }} kuukautta sitten",
+    "date-year": "viime vuonna\n{{ n }} vuotta sitten"
+});
+
 define('app/i18n/fr',{
     "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
     "postbox-author": "Nom (optionnel)",
@@ -649,8 +710,8 @@ define('app/i18n/ru',{
     "postbox-email": "Email (необязательно)",
     "postbox-website": "Сайт (необязательно)",
     "postbox-submit": "Отправить",
-    "num-comments": "1 комментарий\n{{ n }} комментария\n{{ n }} комментариев",
-    "no-comments": "Оставить комментарий",
+    "num-comments": "{{ n }} комментарий\n{{ n }} комментария\n{{ n }} комментариев",
+    "no-comments": "Пока нет комментариев",
     "comment-reply": "Ответить",
     "comment-edit": "Правка",
     "comment-save": "Сохранить",
@@ -661,7 +722,7 @@ define('app/i18n/ru',{
     "comment-deleted": "Комментарий удалён",
     "comment-queued": "Комментарий будет проверен модератором",
     "comment-anonymous": "Аноним",
-    "comment-hidden": "Показать ещё 1 комментарий\nПоказать ещё {{ n }} комментария\nПоказать ещё {{ n }} комментариев",
+    "comment-hidden": "Скрыт {{ n }} комментарий\nСкрыто {{ n }} комментария\nСкрыто {{ n }} комментариев",
     "date-now": "Только что",
     "date-minute": "{{ n }} минуту назад\n{{ n }} минуты назад\n{{ n }} минут назад",
     "date-hour": "{{ n }} час назад\n{{ n }} часа назад\n{{ n }} часов назад",
@@ -871,10 +932,10 @@ define('app/i18n/vi',{
 });
 
 define('app/i18n/zh_CN',{
-    "postbox-text": "在此输入评论(最少3个字符)",
-    "postbox-author": "名字(可选)",
-    "postbox-email": "E-mail(可选)",
-    "postbox-website": "网站(可选)",
+    "postbox-text": "在此输入评论 (最少3个字符)",
+    "postbox-author": "名字 (可选)",
+    "postbox-email": "E-mail (可选)",
+    "postbox-website": "网站 (可选)",
     "postbox-submit": "提交",
 
     "num-comments": "1条评论\n{{ n }}条评论",
@@ -901,22 +962,25 @@ define('app/i18n/zh_CN',{
     "date-year": "去年\n{{ n }}年前"
 });
 
-define('app/i18n',["app/config", "app/i18n/cs", "app/i18n/de", "app/i18n/en",
-        "app/i18n/fr", "app/i18n/hr", "app/i18n/ru", "app/i18n/it",
-        "app/i18n/eo", "app/i18n/sv", "app/i18n/nl", "app/i18n/el_GR",
-        "app/i18n/es", "app/i18n/vi", "app/i18n/zh_CN"],
-        function(config, cs, de, en, fr, hr, ru, it, eo, sv, nl, el, es, vi, zh) {
+define('app/i18n',["app/config", "app/i18n/bg", "app/i18n/cs", "app/i18n/de",
+        "app/i18n/en", "app/i18n/fi", "app/i18n/fr", "app/i18n/hr",
+        "app/i18n/ru", "app/i18n/it", "app/i18n/eo", "app/i18n/sv",
+        "app/i18n/nl", "app/i18n/el_GR", "app/i18n/es", "app/i18n/vi",
+        "app/i18n/zh_CN"],
+        function(config, bg, cs, de, en, fi, fr, hr, ru, it, eo, sv, nl, el, es, vi, zh) {
 
     "use strict";
 
     var pluralforms = function(lang) {
         switch (lang) {
+        case "bg":
         case "cs":
         case "de":
         case "el":
         case "en":
         case "es":
         case "eo":
+        case "fi":
         case "hr":
         case "it":
         case "sv":
@@ -960,6 +1024,7 @@ define('app/i18n',["app/config", "app/i18n/cs", "app/i18n/de", "app/i18n/en",
         en: en,
         eo: eo,
         es: es,
+        fi: fi,
         fr: fr,
         it: it,
         hr: hr,
@@ -1064,7 +1129,7 @@ define('app/globals',[],function() {
     };
 
     Offset.prototype.localTime = function() {
-        return new Date((new Date()).getTime() + this.values.reduce(
+        return new Date((new Date()).getTime() - this.values.reduce(
             function(a, b) { return a + b; }) / this.values.length);
     };
 
@@ -1073,6 +1138,7 @@ define('app/globals',[],function() {
     };
 
 });
+
 define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
     "use strict";
@@ -1488,10 +1554,13 @@ define('app/dom',[],function() {
             el.href = "#";
         }
 
+        if (!content && content !== 0) {
+            content = "";
+        }
         if (["TEXTAREA", "INPUT"].indexOf(el.nodeName) > -1) {
-            el.value = content || "";
+            el.value = content;
         } else {
-            el.textContent = content || "";
+            el.textContent = content;
         }
         return el;
     };
@@ -1900,10 +1969,6 @@ buf.push(null == (jade_interp = comment.text) ? "" : jade_interp);
 buf.push("</div><div class=\"isso-comment-footer\">");
 if ( conf.vote)
 {
-if ( comment.likes - comment.dislikes != 0)
-{
-buf.push("<span class=\"votes\">" + (jade.escape((jade_interp = comment.likes - comment.dislikes) == null ? '' : jade_interp)) + "</span>");
-}
 buf.push("<a href=\"#\" class=\"upvote\">" + (null == (jade_interp = svg['arrow-up']) ? "" : jade_interp) + "</a><span class=\"spacer\">|</span><a href=\"#\" class=\"downvote\">" + (null == (jade_interp = svg['arrow-down']) ? "" : jade_interp) + "</a>");
 }
 buf.push("<a href=\"#\" class=\"reply\">" + (jade.escape((jade_interp = i18n('comment-reply')) == null ? '' : jade_interp)) + "</a><a href=\"#\" class=\"edit\">" + (jade.escape((jade_interp = i18n('comment-edit')) == null ? '' : jade_interp)) + "</a><a href=\"#\" class=\"delete\">" + (jade.escape((jade_interp = i18n('comment-delete')) == null ? '' : jade_interp)) + "</a></div><div class=\"isso-follow-up\"></div></div></div>");}.call(this,"bool" in locals_for_with?locals_for_with.bool:typeof bool!=="undefined"?bool:undefined,"comment" in locals_for_with?locals_for_with.comment:typeof comment!=="undefined"?comment:undefined,"conf" in locals_for_with?locals_for_with.conf:typeof conf!=="undefined"?conf:undefined,"datetime" in locals_for_with?locals_for_with.datetime:typeof datetime!=="undefined"?datetime:undefined,"humanize" in locals_for_with?locals_for_with.humanize:typeof humanize!=="undefined"?humanize:undefined,"i18n" in locals_for_with?locals_for_with.i18n:typeof i18n!=="undefined"?i18n:undefined,"svg" in locals_for_with?locals_for_with.svg:typeof svg!=="undefined"?svg:undefined));;return buf.join("");
@@ -2153,6 +2218,12 @@ define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", 
               $("[name='email']", this).focus();
               return false;
             }
+            if (config["require-author"] &&
+                $("[name='author']", this).value.length <= 0)
+            {
+              $("[name='author']", this).focus();
+              return false;
+            }
             return true;
         };
 
@@ -2160,6 +2231,12 @@ define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", 
         if (config["require-email"]) {
           $("[name='email']", el).placeholder =
             $("[name='email']", el).placeholder.replace(/ \(.*\)/, "");
+        }
+
+        // author is not optional if this config parameter is set
+        if (config["require-author"]) {
+          $("[name='author']", el).placeholder =
+            $("[name='author']", el).placeholder.replace(/ \(.*\)/, "");
         }
 
         // submit form, initialize optional fields with `null` and reset form.
@@ -2180,7 +2257,8 @@ define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", 
             api.create($("#isso-thread").getAttribute("data-isso-id"), {
                 author: author, email: email, website: website,
                 text: utils.text($(".textarea", el).innerHTML),
-                parent: parent || null
+                parent: parent || null,
+                title: $("#isso-thread").getAttribute("data-title") || null
             }).then(function(comment) {
                 $(".textarea", el).innerHTML = "";
                 $(".textarea", el).blur();
@@ -2288,18 +2366,34 @@ define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", 
         );
 
         if (config.vote) {
-            // update vote counter, but hide if votes sum to 0
+            var voteLevels = config['vote-levels'];
+            if (typeof voteLevels === 'string') {
+                // Eg. -5,5,15
+                voteLevels = voteLevels.split(',');
+            }
+            
+            // update vote counter
             var votes = function (value) {
                 var span = $("span.votes", footer);
                 if (span === null) {
-                    if (value !== 0) {
-                        footer.prepend($.new("span.votes", value));
-                    }
+                    footer.prepend($.new("span.votes", value));
                 } else {
-                    if (value === 0) {
-                        span.remove();
-                    } else {
-                        span.textContent = value;
+                    span.textContent = value;
+                }
+                if (value) {
+                    el.classList.remove('isso-no-votes');
+                } else {
+                    el.classList.add('isso-no-votes');
+                }
+                if (voteLevels) {
+                    var before = true;
+                    for (var index = 0; index <= voteLevels.length; index++) {
+                        if (before && (index >= voteLevels.length || value < voteLevels[index])) {
+                            el.classList.add('isso-vote-level-' + index);
+                            before = false;
+                        } else {
+                            el.classList.remove('isso-vote-level-' + index);
+                        }
                     }
                 }
             };
@@ -2315,6 +2409,8 @@ define('app/isso',["app/dom", "app/utils", "app/config", "app/api", "app/jade", 
                     votes(rv.likes - rv.dislikes);
                 });
             });
+            
+            votes(comment.likes - comment.dislikes);
         }
 
         $("a.edit", footer).toggle("click",
@@ -2496,7 +2592,7 @@ define('app/count',["app/api", "app/dom", "app/i18n"], function(api, $, i18n) {
 
 define('text',{load: function(id){throw new Error("Dynamic load not allowed: " + id);}});
 
-define('text!app/../../css/isso.css',[],function () { return '#isso-thread * {\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n}\n#isso-thread a {\n    text-decoration: none;\n}\n\n#isso-thread {\n    padding: 0;\n    margin: 0;\n}\n#isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n}\n#isso-thread .textarea {\n    min-height: 58px;\n    outline: 0;\n}\n#isso-thread .textarea.placeholder {\n    color: #AAA;\n}\n\n.isso-comment {\n    max-width: 68em;\n    padding-top: 0.95em;\n    margin: 0.95em auto;\n}\n.isso-comment:not(:first-of-type),\n.isso-follow-up .isso-comment {\n    border-top: 1px solid rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.avatar,\n.isso-postbox > .avatar {\n    display: block;\n    float: left;\n    width: 7%;\n    margin: 3px 15px 0 0;\n}\n.isso-postbox > .avatar {\n    float: left;\n    margin: 5px 10px 0 5px;\n    width: 48px;\n    height: 48px;\n    overflow: hidden;\n}\n.isso-comment > div.avatar > svg,\n.isso-postbox > .avatar > svg {\n    max-width: 48px;\n    max-height: 48px;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 3px;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.text-wrapper {\n    display: block;\n}\n.isso-comment .isso-follow-up {\n    padding-left: calc(7% + 20px);\n}\n.isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.95em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header {\n    font-size: 0.85em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n    padding: 0 6px;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink,\n.isso-comment > div.text-wrapper > .isso-comment-header .note,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n    color: gray !important;\n    font-weight: normal;\n    text-shadow: none !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header .note:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n    color: #606060 !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .note {\n    float: right;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .author {\n    font-weight: bold;\n    color: #555;\n}\n.isso-comment > div.text-wrapper > .textarea-wrapper .textarea {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p:last-child {\n    margin-bottom: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text h1,\n.isso-comment > div.text-wrapper > div.text h2,\n.isso-comment > div.text-wrapper > div.text h3,\n.isso-comment > div.text-wrapper > div.text h4,\n.isso-comment > div.text-wrapper > div.text h5,\n.isso-comment > div.text-wrapper > div.text h6 {\n    font-size: 130%;\n    font-weight: bold;\n}\n.isso-comment > div.text-wrapper > div.textarea-wrapper .textarea {\n    width: 100%;\n    border: 1px solid #f0f0f0;\n    border-radius: 2px;\n    box-shadow: 0 0 2px #888;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.80em;\n    color: gray !important;\n    clear: left;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a {\n    font-weight: bold;\n    text-decoration: none;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n    color: #111111 !important;\n    text-shadow: #aaaaaa 0 0 1px !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a {\n    position: relative;\n    top: .2em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a + a {\n    padding-left: 1em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n    color: gray;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg,\n.isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n    position: relative;\n    top: .2em;\n}\n.isso-comment .isso-postbox {\n    margin-top: 0.8em;\n}\n\n.isso-postbox {\n    max-width: 68em;\n    margin: 0 auto 2em;\n}\n.isso-postbox > .form-wrapper {\n    display: block;\n    padding: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section,\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: block;\n}\n.isso-postbox > .form-wrapper .textarea {\n    margin: 0 0 .3em;\n    padding: .4em .8em;\n    border-radius: 3px;\n    background-color: #fff;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n#isso-thread .textarea:focus,\n#isso-thread input:focus {\n    border-color: rgba(0, 0, 0, 0.8);\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n    display: inline-block;\n    position: relative;\n    max-width: 25%;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n    padding: .3em 10px;\n    max-width: 100%;\n    border-radius: 3px;\n    background-color: #fff;\n    line-height: 1.4em;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: inline-block;\n    float: right;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input {\n    padding: calc(.3em - 1px);\n    border-radius: 2px;\n    border: 1px solid #CCC;\n    background-color: #DDD;\n    cursor: pointer;\n    outline: 0;\n    line-height: 1.4em;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:hover {\n    background-color: #CCC;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:active {\n    background-color: #BBB;\n}\n@media screen and (max-width:600px) {\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        max-width: 100%;\n        margin: 0 0 .3em;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n        width: 100%;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: none;\n        text-align: right;\n    }\n}\n';});
+define('text!app/../../css/isso.css',[],function () { return '#isso-thread * {\n    -webkit-box-sizing: border-box;\n    -moz-box-sizing: border-box;\n    box-sizing: border-box;\n}\n#isso-thread a {\n    text-decoration: none;\n}\n\n#isso-thread {\n    padding: 0;\n    margin: 0;\n}\n#isso-thread > h4 {\n    color: #555;\n    font-weight: bold;\n}\n#isso-thread .textarea {\n    min-height: 58px;\n    outline: 0;\n}\n#isso-thread .textarea.placeholder {\n    color: #AAA;\n}\n\n.isso-comment {\n    max-width: 68em;\n    padding-top: 0.95em;\n    margin: 0.95em auto;\n}\n.isso-comment:not(:first-of-type),\n.isso-follow-up .isso-comment {\n    border-top: 1px solid rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.avatar,\n.isso-postbox > .avatar {\n    display: block;\n    float: left;\n    width: 7%;\n    margin: 3px 15px 0 0;\n}\n.isso-postbox > .avatar {\n    float: left;\n    margin: 5px 10px 0 5px;\n    width: 48px;\n    height: 48px;\n    overflow: hidden;\n}\n.isso-comment > div.avatar > svg,\n.isso-postbox > .avatar > svg {\n    max-width: 48px;\n    max-height: 48px;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    border-radius: 3px;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-comment > div.text-wrapper {\n    display: block;\n}\n.isso-comment .isso-follow-up {\n    padding-left: calc(7% + 20px);\n}\n.isso-comment > div.text-wrapper > .isso-comment-header, .isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.95em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header {\n    font-size: 0.85em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer {\n    padding: 0 6px;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink,\n.isso-comment > div.text-wrapper > .isso-comment-header .note,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent {\n    color: gray !important;\n    font-weight: normal;\n    text-shadow: none !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .spacer:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.permalink:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header .note:hover,\n.isso-comment > div.text-wrapper > .isso-comment-header a.parent:hover {\n    color: #606060 !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .note {\n    float: right;\n}\n.isso-comment > div.text-wrapper > .isso-comment-header .author {\n    font-weight: bold;\n    color: #555;\n}\n.isso-comment > div.text-wrapper > .textarea-wrapper .textarea {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p {\n    margin-top: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text p:last-child {\n    margin-bottom: 0.2em;\n}\n.isso-comment > div.text-wrapper > div.text h1,\n.isso-comment > div.text-wrapper > div.text h2,\n.isso-comment > div.text-wrapper > div.text h3,\n.isso-comment > div.text-wrapper > div.text h4,\n.isso-comment > div.text-wrapper > div.text h5,\n.isso-comment > div.text-wrapper > div.text h6 {\n    font-size: 130%;\n    font-weight: bold;\n}\n.isso-comment > div.text-wrapper > div.textarea-wrapper .textarea {\n    width: 100%;\n    border: 1px solid #f0f0f0;\n    border-radius: 2px;\n    box-shadow: 0 0 2px #888;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer {\n    font-size: 0.80em;\n    color: gray !important;\n    clear: left;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a {\n    font-weight: bold;\n    text-decoration: none;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer a:hover {\n    color: #111111 !important;\n    text-shadow: #aaaaaa 0 0 1px !important;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a {\n    position: relative;\n    top: .2em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer > a + a {\n    padding-left: 1em;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .votes {\n    color: gray;\n}\n.isso-comment > div.text-wrapper > .isso-comment-footer .upvote svg,\n.isso-comment > div.text-wrapper > .isso-comment-footer .downvote svg {\n    position: relative;\n    top: .2em;\n}\n.isso-comment .isso-postbox {\n    margin-top: 0.8em;\n}\n.isso-comment.isso-no-votes span.votes {\n    display: none;\n}\n\n.isso-postbox {\n    max-width: 68em;\n    margin: 0 auto 2em;\n}\n.isso-postbox > .form-wrapper {\n    display: block;\n    padding: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section,\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: block;\n}\n.isso-postbox > .form-wrapper .textarea {\n    margin: 0 0 .3em;\n    padding: .4em .8em;\n    border-radius: 3px;\n    background-color: #fff;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n#isso-thread .textarea:focus,\n#isso-thread input:focus {\n    border-color: rgba(0, 0, 0, 0.8);\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n    display: inline-block;\n    position: relative;\n    max-width: 25%;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n    padding: .3em 10px;\n    max-width: 100%;\n    border-radius: 3px;\n    background-color: #fff;\n    line-height: 1.4em;\n    border: 1px solid rgba(0, 0, 0, 0.2);\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action {\n    display: inline-block;\n    float: right;\n    margin: 0;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input {\n    padding: calc(.3em - 1px);\n    border-radius: 2px;\n    border: 1px solid #CCC;\n    background-color: #DDD;\n    cursor: pointer;\n    outline: 0;\n    line-height: 1.4em;\n    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:hover {\n    background-color: #CCC;\n}\n.isso-postbox > .form-wrapper > .auth-section .post-action > input:active {\n    background-color: #BBB;\n}\n@media screen and (max-width:600px) {\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper {\n        display: block;\n        max-width: 100%;\n        margin: 0 0 .3em;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .input-wrapper input {\n        width: 100%;\n    }\n    .isso-postbox > .form-wrapper > .auth-section .post-action {\n        display: block;\n        float: none;\n        text-align: right;\n    }\n}\n';});
 
 define('app/text/css',["text!../../../css/isso.css"], function(isso) {
     return {

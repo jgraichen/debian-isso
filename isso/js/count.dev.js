@@ -530,7 +530,7 @@ define('app/globals',[],function() {
     };
 
     Offset.prototype.localTime = function() {
-        return new Date((new Date()).getTime() + this.values.reduce(
+        return new Date((new Date()).getTime() - this.values.reduce(
             function(a, b) { return a + b; }) / this.values.length);
     };
 
@@ -539,6 +539,7 @@ define('app/globals',[],function() {
     };
 
 });
+
 define('app/api',["app/lib/promise", "app/globals"], function(Q, globals) {
 
     "use strict";
@@ -954,10 +955,13 @@ define('app/dom',[],function() {
             el.href = "#";
         }
 
+        if (!content && content !== 0) {
+            content = "";
+        }
         if (["TEXTAREA", "INPUT"].indexOf(el.nodeName) > -1) {
-            el.value = content || "";
+            el.value = content;
         } else {
-            el.textContent = content || "";
+            el.textContent = content;
         }
         return el;
     };
@@ -978,6 +982,7 @@ define('app/config',[],function() {
         "lang": (navigator.language || navigator.userLanguage).split("-")[0],
         "reply-to-self": false,
         "require-email": false,
+        "require-author": false,
         "max-comments-top": "inf",
         "max-comments-nested": 5,
         "reveal-on-click": 5,
@@ -985,7 +990,8 @@ define('app/config',[],function() {
         "avatar-bg": "#f0f0f0",
         "avatar-fg": ["#9abf88", "#5698c4", "#e279a3", "#9163b6",
                       "#be5168", "#f19670", "#e4bf80", "#447c69"].join(" "),
-        "vote": true
+        "vote": true,
+        "vote-levels": null
     };
 
     var js = document.getElementsByTagName("script");
@@ -1008,6 +1014,34 @@ define('app/config',[],function() {
 
     return config;
 
+});
+
+define('app/i18n/bg',{
+    "postbox-text": "Въведете коментара си тук (поне 3 знака)",
+    "postbox-author": "Име/псевдоним (незадължително)",
+    "postbox-email": "Ел. поща (незадължително)",
+    "postbox-website": "Уебсайт (незадължително)",
+    "postbox-submit": "Публикуване",
+    "num-comments": "1 коментар\n{{ n }} коментара",
+    "no-comments": "Все още няма коментари",
+    "comment-reply": "Отговор",
+    "comment-edit": "Редактиране",
+    "comment-save": "Запис",
+    "comment-delete": "Изтриване",
+    "comment-confirm": "Потвърждение",
+    "comment-close": "Затваряне",
+    "comment-cancel": "Отказ",
+    "comment-deleted": "Коментарът е изтрит.",
+    "comment-queued": "Коментарът чака на опашката за модериране.",
+    "comment-anonymous": "анонимен",
+    "comment-hidden": "{{ n }} скрити",
+    "date-now": "сега",
+    "date-minute": "преди 1 минута\nпреди {{ n }} минути",
+    "date-hour": "преди 1 час\nпреди {{ n }} часа",
+    "date-day": "вчера\nпреди {{ n }} дни",
+    "date-week": "миналата седмица\nпреди {{ n }} седмици",
+    "date-month": "миналия месец\nпреди {{ n }} месеца",
+    "date-year": "миналата година\nпреди {{ n }} години"
 });
 
 define('app/i18n/cs',{
@@ -1097,6 +1131,37 @@ define('app/i18n/en',{
     "date-year": "last year\n{{ n }} years ago"
 });
 
+define('app/i18n/fi',{
+    "postbox-text": "Kirjoita kommentti tähän (vähintään 3 merkkiä)",
+    "postbox-author": "Nimi (valinnainen)",
+    "postbox-email": "Sähköposti (valinnainen)",
+    "postbox-website": "Web-sivu (valinnainen)",
+    "postbox-submit": "Lähetä",
+
+    "num-comments": "Yksi kommentti\n{{ n }} kommenttia",
+    "no-comments": "Ei vielä kommentteja",
+
+    "comment-reply": "Vastaa",
+    "comment-edit": "Muokkaa",
+    "comment-save": "Tallenna",
+    "comment-delete": "Poista",
+    "comment-confirm": "Vahvista",
+    "comment-close": "Sulje",
+    "comment-cancel": "Peru",
+    "comment-deleted": "Kommentti on poistettu.",
+    "comment-queued": "Kommentti on laitettu jonoon odottamaan moderointia.",
+    "comment-anonymous": "Nimetön",
+    "comment-hidden": "{{ n }} piilotettua",
+
+    "date-now": "hetki sitten",
+    "date-minute": "minuutti sitten\n{{ n }} minuuttia sitten",
+    "date-hour": "tunti sitten\n{{ n }} tuntia sitten",
+    "date-day": "eilen\n{{ n }} päivää sitten",
+    "date-week": "viime viikolla\n{{ n }} viikkoa sitten",
+    "date-month": "viime kuussa\n{{ n }} kuukautta sitten",
+    "date-year": "viime vuonna\n{{ n }} vuotta sitten"
+});
+
 define('app/i18n/fr',{
     "postbox-text": "Insérez votre commentaire ici (au moins 3 lettres)",
     "postbox-author": "Nom (optionnel)",
@@ -1159,8 +1224,8 @@ define('app/i18n/ru',{
     "postbox-email": "Email (необязательно)",
     "postbox-website": "Сайт (необязательно)",
     "postbox-submit": "Отправить",
-    "num-comments": "1 комментарий\n{{ n }} комментария\n{{ n }} комментариев",
-    "no-comments": "Оставить комментарий",
+    "num-comments": "{{ n }} комментарий\n{{ n }} комментария\n{{ n }} комментариев",
+    "no-comments": "Пока нет комментариев",
     "comment-reply": "Ответить",
     "comment-edit": "Правка",
     "comment-save": "Сохранить",
@@ -1171,7 +1236,7 @@ define('app/i18n/ru',{
     "comment-deleted": "Комментарий удалён",
     "comment-queued": "Комментарий будет проверен модератором",
     "comment-anonymous": "Аноним",
-    "comment-hidden": "Показать ещё 1 комментарий\nПоказать ещё {{ n }} комментария\nПоказать ещё {{ n }} комментариев",
+    "comment-hidden": "Скрыт {{ n }} комментарий\nСкрыто {{ n }} комментария\nСкрыто {{ n }} комментариев",
     "date-now": "Только что",
     "date-minute": "{{ n }} минуту назад\n{{ n }} минуты назад\n{{ n }} минут назад",
     "date-hour": "{{ n }} час назад\n{{ n }} часа назад\n{{ n }} часов назад",
@@ -1381,10 +1446,10 @@ define('app/i18n/vi',{
 });
 
 define('app/i18n/zh_CN',{
-    "postbox-text": "在此输入评论(最少3个字符)",
-    "postbox-author": "名字(可选)",
-    "postbox-email": "E-mail(可选)",
-    "postbox-website": "网站(可选)",
+    "postbox-text": "在此输入评论 (最少3个字符)",
+    "postbox-author": "名字 (可选)",
+    "postbox-email": "E-mail (可选)",
+    "postbox-website": "网站 (可选)",
     "postbox-submit": "提交",
 
     "num-comments": "1条评论\n{{ n }}条评论",
@@ -1411,22 +1476,25 @@ define('app/i18n/zh_CN',{
     "date-year": "去年\n{{ n }}年前"
 });
 
-define('app/i18n',["app/config", "app/i18n/cs", "app/i18n/de", "app/i18n/en",
-        "app/i18n/fr", "app/i18n/hr", "app/i18n/ru", "app/i18n/it",
-        "app/i18n/eo", "app/i18n/sv", "app/i18n/nl", "app/i18n/el_GR",
-        "app/i18n/es", "app/i18n/vi", "app/i18n/zh_CN"],
-        function(config, cs, de, en, fr, hr, ru, it, eo, sv, nl, el, es, vi, zh) {
+define('app/i18n',["app/config", "app/i18n/bg", "app/i18n/cs", "app/i18n/de",
+        "app/i18n/en", "app/i18n/fi", "app/i18n/fr", "app/i18n/hr",
+        "app/i18n/ru", "app/i18n/it", "app/i18n/eo", "app/i18n/sv",
+        "app/i18n/nl", "app/i18n/el_GR", "app/i18n/es", "app/i18n/vi",
+        "app/i18n/zh_CN"],
+        function(config, bg, cs, de, en, fi, fr, hr, ru, it, eo, sv, nl, el, es, vi, zh) {
 
     "use strict";
 
     var pluralforms = function(lang) {
         switch (lang) {
+        case "bg":
         case "cs":
         case "de":
         case "el":
         case "en":
         case "es":
         case "eo":
+        case "fi":
         case "hr":
         case "it":
         case "sv":
@@ -1470,6 +1538,7 @@ define('app/i18n',["app/config", "app/i18n/cs", "app/i18n/de", "app/i18n/en",
         en: en,
         eo: eo,
         es: es,
+        fi: fi,
         fr: fr,
         it: it,
         hr: hr,
