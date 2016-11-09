@@ -1,6 +1,6 @@
 Metadata-Version: 1.1
 Name: isso
-Version: 0.9.10
+Version: 0.10.6
 Summary: lightweight Disqus alternative
 Home-page: https://github.com/posativ/isso/
 Author: Martin Zimmermann
@@ -16,3 +16,4 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 2.6
 Classifier: Programming Language :: Python :: 2.7
 Classifier: Programming Language :: Python :: 3.3
+Classifier: Programming Language :: Python :: 3.4
