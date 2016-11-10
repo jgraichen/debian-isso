@@ -12,7 +12,8 @@ X-Python-Version: 2.7
 
 Package: isso
 Architecture: all
-Depends: gunicorn, lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends}
+Depends: gunicorn, lsb-base (>= 3.0-6), ${misc:Depends}, ${python:Depends},
+    python-werkzeug (>=0.8), python-configparser, python-ipaddr (>=2.1)
 Conflicts: isso-common
 Replaces: isso-common
 Recommends: ${python:Recommends}
