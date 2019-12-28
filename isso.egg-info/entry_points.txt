@@ -1,3 +1,0 @@
-[console_scripts]
-isso = isso:main
-
